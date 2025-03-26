@@ -18,6 +18,7 @@ import {
   Bell,
   Users,
   FileText,
+  MessageSquare,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -53,6 +54,11 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
       title: "收藏车型",
       href: "/dashboard/user/favorites",
       icon: <Heart className="h-5 w-5" />,
+    },
+    {
+      title: "我的评价",
+      href: "/dashboard/user/reviews",
+      icon: <MessageSquare className="h-5 w-5" />,
     },
     {
       title: "消息通知",
