@@ -4,12 +4,12 @@ import { prisma } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 
 // 获取当前商家统计数据
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // 获取当前会话信息
     const session = await getServerSession(authOptions);
     
-    if (!session || !session.user || session.user.type !== "dealer") {
+    if (!session?.user || !session.user.id) {
       return NextResponse.json({ error: "未授权访问" }, { status: 401 });
     }
     
@@ -105,8 +105,8 @@ export async function GET() {
     ];
     
     return NextResponse.json(stats);
-  } catch (error) {
-    console.error("获取商家统计数据失败:", error);
+  } catch (error: any) {
+    console.error("获取商家统计数据失败:", { message: error?.message || '未知错误' });
     return NextResponse.json({ error: "获取商家统计数据失败" }, { status: 500 });
   }
 } 

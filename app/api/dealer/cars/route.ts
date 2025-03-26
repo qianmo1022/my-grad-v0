@@ -68,8 +68,8 @@ export async function GET(request: Request) {
     const filteredCars = carSales.filter(car => car !== null);
     
     return NextResponse.json(filteredCars);
-  } catch (error) {
-    console.error('获取车型数据失败:', error);
+  } catch (error: any) {
+    console.error('获取车型数据失败:', { message: error?.message || '未知错误' });
     return NextResponse.json({ error: '获取车型数据失败' }, { status: 500 });
   }
 } 

@@ -11,7 +11,7 @@ import SalesChart from "@/components/dashboard/sales-chart"
 import { Car, Users, CreditCard, TrendingUp } from "lucide-react"
 
 export default function DealerDashboard() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [stats, setStats] = useState<any[]>([])
@@ -34,79 +34,95 @@ export default function DealerDashboard() {
   // 获取统计数据
   useEffect(() => {
     async function fetchStats() {
+      if (status !== "authenticated" || !session?.user) {
+        return;
+      }
+
       try {
         const response = await fetch('/api/dealer/stats')
-        if (response.ok) {
-          const data = await response.json()
-          setStats(data)
-        } else {
-          console.error('获取统计数据失败')
-          // 设置默认统计数据
-          setStats([
-            {
-              title: "总销售额",
-              value: "¥0",
-              icon: <CreditCard className="h-4 w-4" />,
-              trend: { value: 0, isPositive: true },
-            },
-            {
-              title: "车型数量",
-              value: "0",
-              icon: <Car className="h-4 w-4" />,
-              trend: { value: 0, isPositive: true },
-            },
-            {
-              title: "客户数量",
-              value: "0",
-              icon: <Users className="h-4 w-4" />,
-              trend: { value: 0, isPositive: true },
-            },
-            {
-              title: "转化率",
-              value: "0%",
-              icon: <TrendingUp className="h-4 w-4" />,
-              description: "配置到订单",
-              trend: { value: 0, isPositive: true },
-            },
-          ])
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || '获取统计数据失败')
         }
+        const data = await response.json()
+        setStats(data)
       } catch (error) {
         console.error('获取统计数据错误:', error)
         toast({
           title: "数据加载失败",
-          description: "无法加载统计数据，请稍后重试",
+          description: error instanceof Error ? error.message : "无法加载统计数据，请稍后重试",
           variant: "destructive",
         })
+        // 设置默认统计数据
+        setStats([
+          {
+            title: "总销售额",
+            value: "¥0",
+            icon: <CreditCard className="h-4 w-4" />,
+            trend: { value: 0, isPositive: true },
+          },
+          {
+            title: "车型数量",
+            value: "0",
+            icon: <Car className="h-4 w-4" />,
+            trend: { value: 0, isPositive: true },
+          },
+          {
+            title: "客户数量",
+            value: "0",
+            icon: <Users className="h-4 w-4" />,
+            trend: { value: 0, isPositive: true },
+          },
+          {
+            title: "转化率",
+            value: "0%",
+            icon: <TrendingUp className="h-4 w-4" />,
+            description: "配置到订单",
+            trend: { value: 0, isPositive: true },
+          },
+        ])
       }
     }
 
     fetchStats()
-  }, [toast])
+  }, [status, session, toast])
 
   // 获取订单数据
   useEffect(() => {
     async function fetchOrders() {
+      if (status !== "authenticated" || !session?.user) {
+        return;
+      }
+
       try {
         const response = await fetch('/api/dealer/orders?limit=4')
-        if (response.ok) {
-          const data = await response.json()
-          setOrders(data)
-        } else {
-          console.error('获取订单数据失败')
-          setOrders([])
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || '获取订单数据失败')
         }
+        const data = await response.json()
+        setOrders(data)
       } catch (error) {
         console.error('获取订单数据错误:', error)
+        toast({
+          title: "数据加载失败",
+          description: error instanceof Error ? error.message : "无法加载订单数据，请稍后重试",
+          variant: "destructive",
+        })
         setOrders([])
       }
     }
 
     fetchOrders()
-  }, [])
+  }, [status, session, toast])
 
   // 获取车型数据
   useEffect(() => {
     async function fetchCars() {
+      if (status !== "authenticated" || !session?.user) {
+        return;
+      }
+
       try {
         const response = await fetch('/api/dealer/cars')
         if (response.ok) {
@@ -123,11 +139,15 @@ export default function DealerDashboard() {
     }
 
     fetchCars()
-  }, [])
+  }, [status, session])
 
   // 获取销售数据
   useEffect(() => {
     async function fetchSalesData() {
+      if (status !== "authenticated" || !session?.user) {
+        return;
+      }
+
       try {
         const response = await fetch('/api/dealer/sales')
         if (response.ok) {
@@ -146,7 +166,7 @@ export default function DealerDashboard() {
     }
 
     fetchSalesData()
-  }, [])
+  }, [status, session])
 
   // 添加图标到统计数据
   const statsWithIcons = stats.map(stat => {
@@ -169,6 +189,26 @@ export default function DealerDashboard() {
     }
     return { ...stat, icon };
   });
+
+  if (status === "loading") {
+    return (
+      <DashboardLayout userType="dealer">
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">加载中...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <DashboardLayout userType="dealer">
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">请先登录</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout userType="dealer">

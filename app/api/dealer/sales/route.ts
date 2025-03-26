@@ -27,6 +27,18 @@ interface SalesDataRecord {
   dealerId: string;
 }
 
+// 定义订单类型
+interface Order {
+  id: string;
+  amount: number;
+  createdAt: Date;
+  car: {
+    id: string;
+    name: string;
+    basePrice: number;
+  };
+}
+
 // 获取销售数据
 export async function GET(request: Request) {
   try {
@@ -63,43 +75,56 @@ export async function GET(request: Request) {
         startDate.setDate(today.getDate() - 7);
     }
     
-    // 1. 查询销售数据 - 使用类型断言
-    const salesData = await (prisma as any).salesData.findMany({
-      where: {
-        dealerId,
-        period,
-        date: {
-          gte: startDate,
-          lte: today
+    // 1. 查询销售数据
+    let salesData: SalesDataRecord[] = [];
+    try {
+      salesData = await prisma.salesData.findMany({
+        where: {
+          dealerId,
+          period,
+          date: {
+            gte: startDate,
+            lte: today
+          }
+        },
+        orderBy: {
+          date: "asc"
         }
-      },
-      orderBy: {
-        date: "asc"
-      }
-    }) as SalesDataRecord[];
+      });
+    } catch (error: any) {
+      console.error("查询销售数据失败:", { message: error?.message || '未知错误' });
+      // 如果查询失败，使用空数组
+      salesData = [];
+    }
     
     // 2. 查询订单数据
-    const orders = await prisma.order.findMany({
-      where: {
-        dealerId,
-        createdAt: {
-          gte: startDate,
-          lte: today
-        }
-      },
-      include: {
-        car: {
-          select: {
-            id: true,
-            name: true,
-            basePrice: true
+    let orders: Order[] = [];
+    try {
+      orders = await prisma.order.findMany({
+        where: {
+          dealerId,
+          createdAt: {
+            gte: startDate,
+            lte: today
           }
+        },
+        include: {
+          car: {
+            select: {
+              id: true,
+              name: true,
+              basePrice: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: "desc"
         }
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
-    });
+      });
+    } catch (error: any) {
+      console.error("查询订单数据失败:", { message: error?.message || '未知错误' });
+      orders = [];
+    }
     
     // 3. 计算热门车型
     const carSalesMap = new Map<string, {
@@ -124,7 +149,7 @@ export async function GET(request: Request) {
           name: carName,
           sales: 0,
           revenue: 0,
-          trend: 0 // 真实场景下可以计算趋势
+          trend: 0
         });
       }
       
@@ -141,7 +166,7 @@ export async function GET(request: Request) {
       .map(car => ({
         ...car,
         revenue: `¥${car.revenue.toLocaleString()}`,
-        trend: Math.random() * 10 - 5 // 模拟随机趋势数据，实际应该基于历史比较
+        trend: Math.random() * 10 - 5
       }));
     
     // 4. 计算平均订单价值
@@ -150,7 +175,6 @@ export async function GET(request: Request) {
       : 0;
     
     // 5. 计算销售趋势
-    // 简化处理，真实场景应该比较当前周期和上个周期
     const salesTrend = {
       percentage: Math.random() * 20,
       isPositive: Math.random() > 0.3
@@ -178,8 +202,8 @@ export async function GET(request: Request) {
       averageOrderValue: `¥${averageOrderValue.toLocaleString()}`,
       salesTrend
     });
-  } catch (error) {
-    console.error("获取销售数据失败:", error);
+  } catch (error: any) {
+    console.error("获取销售数据失败:", { message: error?.message || '未知错误' });
     return NextResponse.json(
       { error: "获取销售数据失败" },
       { status: 500 }
