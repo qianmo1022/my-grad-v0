@@ -35,9 +35,53 @@ model Dealer {
   name         String
   businessId   String   @unique
   phone        String?
+  logo         String?  // 商家logo
+  businessName String?  // 商店名称
+  address      String?  // 商店地址
+  city         String?  // 城市
+  province     String?  // 省份
+  postalCode   String?  // 邮政编码
+  businessHours String? // 营业时间
+  description  String?  @db.Text // 商店描述
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   orders       Order[]
+  customers    Customer[] // 关联到客户
+  salesData    SalesData[] // 关联到销售数据
+}
+
+// 客户模型
+model Customer {
+  id          String    @id @default(uuid())
+  name        String
+  email       String    @unique
+  phone       String?
+  status      String    @default("active") // active, inactive
+  totalSpent  Float     @default(0)
+  lastOrderDate DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  dealer      Dealer    @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  dealerId    String
+  orders      Order[]   // 关联的订单
+
+  @@index([dealerId])
+}
+
+// 销售数据模型
+model SalesData {
+  id          String    @id @default(uuid())
+  date        DateTime
+  revenue     Float
+  orderCount  Int
+  period      String    // daily, weekly, monthly, yearly
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  dealer      Dealer    @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  dealerId    String
+  
+  @@index([dealerId])
+  @@index([date])
 }
 
 // 汽车模型
@@ -118,10 +162,14 @@ model Order {
   carId       String
   // 订单配置选项
   configuration Json
+  // 与客户关联
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  customerId  String?
 
   @@index([userId])
   @@index([dealerId])
   @@index([carId])
+  @@index([customerId])
 }
 
 // 车型特性模型
