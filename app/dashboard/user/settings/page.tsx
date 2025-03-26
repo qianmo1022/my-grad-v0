@@ -2,7 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import DashboardLayout from "@/components/dashboard/layout"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -17,14 +18,15 @@ import { Upload } from "lucide-react"
 
 export default function SettingsPage() {
   const { toast } = useToast()
+  const { data: session } = useSession()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   // 个人信息表单状态
   const [profileForm, setProfileForm] = useState({
-    name: "张先生",
-    email: "zhang@example.com",
-    phone: "13800138000",
-    address: "上海市浦东新区张江高科技园区",
+    firstName: "",
+    lastName: "",
+    email: "",
   })
 
   // 通知设置状态
@@ -35,6 +37,71 @@ export default function SettingsPage() {
     systemNotifications: true,
     reviewReplies: true,
   })
+
+  // 获取用户信息
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setIsLoading(true)
+        
+        // 即使session未完全加载也尝试请求用户数据
+        const response = await fetch('/api/user')
+        
+        if (response.ok) {
+          const userData = await response.json()
+          
+          // 更新表单状态
+          setProfileForm({
+            firstName: userData.firstName || "",
+            lastName: userData.lastName || "",
+            email: userData.email || "",
+          })
+        } else {
+          console.error('获取用户数据失败')
+          
+          // 如果有session信息，使用session中的基本信息
+          if (session?.user) {
+            setProfileForm(prev => ({
+              ...prev,
+              email: session.user.email || "",
+              // 可以从session.user.name提取firstName和lastName，如果name格式是"firstName lastName"
+              firstName: session.user.name?.split(' ')[0] || "",
+              lastName: session.user.name?.split(' ')[1] || "",
+            }))
+          }
+          
+          toast({
+            title: "获取用户信息失败",
+            description: "无法加载您的详细个人信息，已显示基本信息",
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        console.error('获取用户数据错误:', error)
+        
+        // 如果有session信息，使用session中的基本信息
+        if (session?.user) {
+          setProfileForm(prev => ({
+            ...prev,
+            email: session.user.email || "",
+            // 可以从session.user.name提取firstName和lastName，如果name格式是"firstName lastName"
+            firstName: session.user.name?.split(' ')[0] || "",
+            lastName: session.user.name?.split(' ')[1] || "",
+          }))
+        }
+        
+        toast({
+          title: "获取用户信息失败",
+          description: "无法加载您的详细个人信息，已显示基本信息",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchUserData()
+  }, [session, toast])
 
   // 处理个人信息表单变更
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,51 +118,129 @@ export default function SettingsPage() {
   }
 
   // 处理个人信息保存
-  const handleProfileSave = (e: React.FormEvent) => {
+  const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // 模拟API请求
-    setTimeout(() => {
-      setIsSubmitting(false)
-      toast({
-        title: "个人信息已更新",
-        description: "您的个人信息已成功保存",
+    try {
+      const response = await fetch('/api/user', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: profileForm.firstName,
+          lastName: profileForm.lastName,
+        }),
       })
-    }, 1000)
+
+      if (response.ok) {
+        toast({
+          title: "个人信息已更新",
+          description: "您的个人信息已成功保存",
+        })
+      } else {
+        toast({
+          title: "更新失败",
+          description: "保存个人信息时出现错误，请稍后重试",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('更新用户信息错误:', error)
+      toast({
+        title: "更新失败",
+        description: "保存个人信息时出现错误，请稍后重试",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   // 处理密码更新
-  const handlePasswordUpdate = (e: React.FormEvent) => {
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-
-    // 模拟API请求
-    setTimeout(() => {
+    
+    const form = e.target as HTMLFormElement
+    const formData = new FormData(form)
+    const currentPassword = formData.get('currentPassword') as string
+    const newPassword = formData.get('newPassword') as string
+    const confirmPassword = formData.get('confirmPassword') as string
+    
+    // 验证密码
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "密码不匹配",
+        description: "新密码和确认密码不一致，请重新输入",
+        variant: "destructive",
+      })
       setIsSubmitting(false)
+      return
+    }
+    
+    try {
+      // 这里应该调用更新密码的API
+      // 目前模拟API请求，后续可以实现真实的API调用
+      // const response = await fetch('/api/user/password', {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ currentPassword, newPassword }),
+      // })
+      
+      // 模拟API请求
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
       toast({
         title: "密码已更新",
         description: "您的密码已成功更新",
       })
-
+      
       // 重置表单
-      const form = e.target as HTMLFormElement
       form.reset()
-    }, 1000)
+    } catch (error) {
+      console.error('更新密码错误:', error)
+      toast({
+        title: "更新失败",
+        description: "更新密码时出现错误，请稍后重试",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   // 处理通知设置保存
-  const handleNotificationSave = () => {
+  const handleNotificationSave = async () => {
     setIsSubmitting(true)
-
-    // 模拟API请求
-    setTimeout(() => {
-      setIsSubmitting(false)
+    
+    try {
+      // 这里应该调用更新通知设置的API
+      // 目前模拟API请求，后续可以实现真实的API调用
+      // const response = await fetch('/api/user/notifications', {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(notificationSettings),
+      // })
+      
+      // 模拟API请求
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
       toast({
         title: "通知设置已更新",
         description: "您的通知偏好设置已成功保存",
       })
-    }, 1000)
+    } catch (error) {
+      console.error('更新通知设置错误:', error)
+      toast({
+        title: "更新失败",
+        description: "保存通知设置时出现错误，请稍后重试",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -122,25 +267,36 @@ export default function SettingsPage() {
               </CardHeader>
 
               <CardContent>
-                <form onSubmit={handleProfileSave} className="space-y-6">
-                  <div className="flex flex-col md:flex-row gap-6">
-                    <div className="flex flex-col items-center gap-4">
-                      <Avatar className="h-24 w-24">
-                        <AvatarImage src="/placeholder.svg?height=96&width=96" alt="张先生" />
-                        <AvatarFallback>张</AvatarFallback>
-                      </Avatar>
+                {isLoading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <p className="text-muted-foreground">加载用户信息中...</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleProfileSave} className="space-y-6">
+                    <div className="flex flex-col md:flex-row gap-6">
+                      <div className="flex flex-col items-center gap-4">
+                        <Avatar className="h-24 w-24">
+                          <AvatarImage src="/placeholder.svg?height=96&width=96" alt={`${profileForm.firstName} ${profileForm.lastName}`} />
+                          <AvatarFallback>{profileForm.firstName ? profileForm.firstName.charAt(0) : "U"}</AvatarFallback>
+                        </Avatar>
 
-                      <Button type="button" variant="outline" size="sm" className="gap-2">
-                        <Upload className="h-4 w-4" />
-                        更换头像
-                      </Button>
-                    </div>
+                        <Button type="button" variant="outline" size="sm" className="gap-2">
+                          <Upload className="h-4 w-4" />
+                          更换头像
+                        </Button>
+                      </div>
 
-                    <div className="flex-1 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="name">姓名</Label>
-                          <Input id="name" name="name" value={profileForm.name} onChange={handleProfileChange} />
+                      <div className="flex-1 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="firstName">姓</Label>
+                            <Input id="firstName" name="firstName" value={profileForm.firstName} onChange={handleProfileChange} />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="lastName">名</Label>
+                            <Input id="lastName" name="lastName" value={profileForm.lastName} onChange={handleProfileChange} />
+                          </div>
                         </div>
 
                         <div className="space-y-2">
@@ -151,30 +307,19 @@ export default function SettingsPage() {
                             type="email"
                             value={profileForm.email}
                             onChange={handleProfileChange}
+                            disabled
                           />
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">手机号码</Label>
-                          <Input id="phone" name="phone" value={profileForm.phone} onChange={handleProfileChange} />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="address">地址</Label>
-                        <Input id="address" name="address" value={profileForm.address} onChange={handleProfileChange} />
-                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex justify-end">
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "保存中..." : "保存更改"}
-                    </Button>
-                  </div>
-                </form>
+                    <div className="flex justify-end">
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? "保存中..." : "保存更改"}
+                      </Button>
+                    </div>
+                  </form>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
