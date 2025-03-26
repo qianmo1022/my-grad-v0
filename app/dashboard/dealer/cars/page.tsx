@@ -1,72 +1,76 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useToast } from "@/components/ui/use-toast"
 import DashboardLayout from "@/components/dashboard/layout"
 import CarManagement from "@/components/dashboard/car-management"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function DealerCars() {
-  // 模拟数据
-  const allCars = [
-    {
-      id: "CAR-001",
-      name: "豪华轿车",
-      thumbnail: "/placeholder.svg?height=100&width=160",
-      basePrice: "¥350,000",
-      status: "active" as const,
-      sales: 28,
-    },
-    {
-      id: "CAR-002",
-      name: "城市SUV",
-      thumbnail: "/placeholder.svg?height=100&width=160",
-      basePrice: "¥280,000",
-      status: "active" as const,
-      sales: 42,
-    },
-    {
-      id: "CAR-003",
-      name: "跑车系列",
-      thumbnail: "/placeholder.svg?height=100&width=160",
-      basePrice: "¥580,000",
-      status: "active" as const,
-      sales: 15,
-    },
-    {
-      id: "CAR-004",
-      name: "紧凑型轿车",
-      thumbnail: "/placeholder.svg?height=100&width=160",
-      basePrice: "¥180,000",
-      status: "draft" as const,
-      sales: 0,
-    },
-    {
-      id: "CAR-005",
-      name: "电动轿车",
-      thumbnail: "/placeholder.svg?height=100&width=160",
-      basePrice: "¥320,000",
-      status: "active" as const,
-      sales: 22,
-    },
-    {
-      id: "CAR-006",
-      name: "豪华SUV",
-      thumbnail: "/placeholder.svg?height=100&width=160",
-      basePrice: "¥450,000",
-      status: "active" as const,
-      sales: 18,
-    },
-    {
-      id: "CAR-007",
-      name: "经典轿车",
-      thumbnail: "/placeholder.svg?height=100&width=160",
-      basePrice: "¥280,000",
-      status: "archived" as const,
-      sales: 35,
-    },
-  ]
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [allCars, setAllCars] = useState<any[]>([])
+  const [activeCars, setActiveCars] = useState<any[]>([])
+  const [draftCars, setDraftCars] = useState<any[]>([])
+  const [archivedCars, setArchivedCars] = useState<any[]>([])
 
-  const activeCars = allCars.filter((car) => car.status === "active")
-  const draftCars = allCars.filter((car) => car.status === "draft")
-  const archivedCars = allCars.filter((car) => car.status === "archived")
+  // 获取所有车型数据
+  useEffect(() => {
+    async function fetchAllCars() {
+      try {
+        setIsLoading(true)
+        const response = await fetch('/api/dealer/cars')
+        if (response.ok) {
+          const data = await response.json()
+          setAllCars(data)
+          
+          // 根据状态过滤车型
+          setActiveCars(data.filter((car: any) => car.status === "active"))
+          setDraftCars(data.filter((car: any) => car.status === "draft"))
+          setArchivedCars(data.filter((car: any) => car.status === "archived"))
+        } else {
+          console.error('获取车型数据失败')
+          toast({
+            title: "数据加载失败",
+            description: "无法加载车型数据，请稍后重试",
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        console.error('获取车型数据错误:', error)
+        toast({
+          title: "数据加载失败",
+          description: "获取车型数据时发生错误",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchAllCars()
+  }, [toast])
+
+  // 获取特定状态的车型
+  async function fetchCarsByStatus(status: string) {
+    try {
+      setIsLoading(true)
+      const response = await fetch(`/api/dealer/cars?status=${status}`)
+      if (response.ok) {
+        const data = await response.json()
+        return data
+      } else {
+        console.error(`获取${status}状态车型数据失败`)
+        return []
+      }
+    } catch (error) {
+      console.error(`获取${status}状态车型数据错误:`, error)
+      return []
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <DashboardLayout userType="dealer">
@@ -82,26 +86,48 @@ export default function DealerCars() {
             <CardDescription>按状态查看您的车型</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="all">
-              <TabsList>
-                <TabsTrigger value="all">全部车型</TabsTrigger>
-                <TabsTrigger value="active">已上线</TabsTrigger>
-                <TabsTrigger value="draft">草稿</TabsTrigger>
-                <TabsTrigger value="archived">已归档</TabsTrigger>
-              </TabsList>
-              <TabsContent value="all" className="pt-4">
-                <CarManagement cars={allCars} />
-              </TabsContent>
-              <TabsContent value="active" className="pt-4">
-                <CarManagement cars={activeCars} />
-              </TabsContent>
-              <TabsContent value="draft" className="pt-4">
-                <CarManagement cars={draftCars} />
-              </TabsContent>
-              <TabsContent value="archived" className="pt-4">
-                <CarManagement cars={archivedCars} />
-              </TabsContent>
-            </Tabs>
+            {isLoading ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">加载数据中...</p>
+              </div>
+            ) : (
+              <Tabs defaultValue="all">
+                <TabsList>
+                  <TabsTrigger value="all">全部车型</TabsTrigger>
+                  <TabsTrigger value="active">已上线</TabsTrigger>
+                  <TabsTrigger value="draft">草稿</TabsTrigger>
+                  <TabsTrigger value="archived">已归档</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all" className="pt-4">
+                  {allCars.length > 0 ? (
+                    <CarManagement cars={allCars} />
+                  ) : (
+                    <p className="text-center py-4 text-muted-foreground">暂无车型数据</p>
+                  )}
+                </TabsContent>
+                <TabsContent value="active" className="pt-4">
+                  {activeCars.length > 0 ? (
+                    <CarManagement cars={activeCars} />
+                  ) : (
+                    <p className="text-center py-4 text-muted-foreground">暂无已上线车型</p>
+                  )}
+                </TabsContent>
+                <TabsContent value="draft" className="pt-4">
+                  {draftCars.length > 0 ? (
+                    <CarManagement cars={draftCars} />
+                  ) : (
+                    <p className="text-center py-4 text-muted-foreground">暂无草稿车型</p>
+                  )}
+                </TabsContent>
+                <TabsContent value="archived" className="pt-4">
+                  {archivedCars.length > 0 ? (
+                    <CarManagement cars={archivedCars} />
+                  ) : (
+                    <p className="text-center py-4 text-muted-foreground">暂无已归档车型</p>
+                  )}
+                </TabsContent>
+              </Tabs>
+            )}
           </CardContent>
         </Card>
       </div>

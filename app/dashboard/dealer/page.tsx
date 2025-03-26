@@ -1,3 +1,8 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useToast } from "@/components/ui/use-toast"
 import DashboardLayout from "@/components/dashboard/layout"
 import StatsCard from "@/components/dashboard/stats-card"
 import RecentOrders from "@/components/dashboard/recent-orders"
@@ -6,162 +11,200 @@ import SalesChart from "@/components/dashboard/sales-chart"
 import { Car, Users, CreditCard, TrendingUp } from "lucide-react"
 
 export default function DealerDashboard() {
-  // 模拟数据
-  const stats = [
-    {
-      title: "总销售额",
-      value: "¥3,250,000",
-      icon: <CreditCard className="h-4 w-4" />,
-      trend: { value: 12, isPositive: true },
-    },
-    {
-      title: "车型数量",
-      value: "15",
-      icon: <Car className="h-4 w-4" />,
-      trend: { value: 5, isPositive: true },
-    },
-    {
-      title: "客户数量",
-      value: "128",
-      icon: <Users className="h-4 w-4" />,
-      trend: { value: 8, isPositive: true },
-    },
-    {
-      title: "转化率",
-      value: "24%",
-      icon: <TrendingUp className="h-4 w-4" />,
-      description: "配置到订单",
-      trend: { value: 3, isPositive: true },
-    },
-  ]
+  const { data: session } = useSession()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [stats, setStats] = useState<any[]>([])
+  const [orders, setOrders] = useState<any[]>([])
+  const [cars, setCars] = useState<any[]>([])
+  const [salesData, setSalesData] = useState<any>({
+    weekly: [],
+    monthly: [],
+    yearly: []
+  })
+  const [dealerName, setDealerName] = useState<string>("商家")
 
-  const orders = [
-    {
-      id: "ORD-001",
-      car: "豪华轿车 - 高配版",
-      date: "2023-11-15",
-      amount: "¥385,000",
-      status: "completed" as const,
-    },
-    {
-      id: "ORD-002",
-      car: "城市SUV - 标准版",
-      date: "2023-12-03",
-      amount: "¥292,000",
-      status: "processing" as const,
-    },
-    {
-      id: "ORD-003",
-      car: "跑车系列 - 性能版",
-      date: "2024-01-10",
-      amount: "¥665,000",
-      status: "pending" as const,
-    },
-    {
-      id: "ORD-004",
-      car: "豪华轿车 - 商务版",
-      date: "2024-01-22",
-      amount: "¥372,000",
-      status: "processing" as const,
-    },
-  ]
+  // 获取商家名称
+  useEffect(() => {
+    if (session?.user) {
+      setDealerName(session.user.name || "商家")
+    }
+  }, [session])
 
-  const cars = [
-    {
-      id: "CAR-001",
-      name: "豪华轿车",
-      thumbnail: "/placeholder.svg?height=100&width=160",
-      basePrice: "¥350,000",
-      status: "active" as const,
-      sales: 28,
-    },
-    {
-      id: "CAR-002",
-      name: "城市SUV",
-      thumbnail: "/placeholder.svg?height=100&width=160",
-      basePrice: "¥280,000",
-      status: "active" as const,
-      sales: 42,
-    },
-    {
-      id: "CAR-003",
-      name: "跑车系列",
-      thumbnail: "/placeholder.svg?height=100&width=160",
-      basePrice: "¥580,000",
-      status: "active" as const,
-      sales: 15,
-    },
-    {
-      id: "CAR-004",
-      name: "紧凑型轿车",
-      thumbnail: "/placeholder.svg?height=100&width=160",
-      basePrice: "¥180,000",
-      status: "draft" as const,
-      sales: 0,
-    },
-  ]
+  // 获取统计数据
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const response = await fetch('/api/dealer/stats')
+        if (response.ok) {
+          const data = await response.json()
+          setStats(data)
+        } else {
+          console.error('获取统计数据失败')
+          // 设置默认统计数据
+          setStats([
+            {
+              title: "总销售额",
+              value: "¥0",
+              icon: <CreditCard className="h-4 w-4" />,
+              trend: { value: 0, isPositive: true },
+            },
+            {
+              title: "车型数量",
+              value: "0",
+              icon: <Car className="h-4 w-4" />,
+              trend: { value: 0, isPositive: true },
+            },
+            {
+              title: "客户数量",
+              value: "0",
+              icon: <Users className="h-4 w-4" />,
+              trend: { value: 0, isPositive: true },
+            },
+            {
+              title: "转化率",
+              value: "0%",
+              icon: <TrendingUp className="h-4 w-4" />,
+              description: "配置到订单",
+              trend: { value: 0, isPositive: true },
+            },
+          ])
+        }
+      } catch (error) {
+        console.error('获取统计数据错误:', error)
+        toast({
+          title: "数据加载失败",
+          description: "无法加载统计数据，请稍后重试",
+          variant: "destructive",
+        })
+      }
+    }
 
-  const salesData = {
-    weekly: [
-      { month: "周一", sales: 5 },
-      { month: "周二", sales: 8 },
-      { month: "周三", sales: 12 },
-      { month: "周四", sales: 10 },
-      { month: "周五", sales: 15 },
-      { month: "周六", sales: 18 },
-      { month: "周日", sales: 14 },
-    ],
-    monthly: [
-      { month: "1月", sales: 42 },
-      { month: "2月", sales: 38 },
-      { month: "3月", sales: 45 },
-      { month: "4月", sales: 50 },
-      { month: "5月", sales: 55 },
-      { month: "6月", sales: 60 },
-      { month: "7月", sales: 58 },
-      { month: "8月", sales: 65 },
-      { month: "9月", sales: 70 },
-      { month: "10月", sales: 75 },
-      { month: "11月", sales: 80 },
-      { month: "12月", sales: 85 },
-    ],
-    yearly: [
-      { month: "2019", sales: 320 },
-      { month: "2020", sales: 280 },
-      { month: "2021", sales: 350 },
-      { month: "2022", sales: 420 },
-      { month: "2023", sales: 480 },
-      { month: "2024", sales: 180 },
-    ],
-  }
+    fetchStats()
+  }, [toast])
+
+  // 获取订单数据
+  useEffect(() => {
+    async function fetchOrders() {
+      try {
+        const response = await fetch('/api/dealer/orders?limit=4')
+        if (response.ok) {
+          const data = await response.json()
+          setOrders(data)
+        } else {
+          console.error('获取订单数据失败')
+          setOrders([])
+        }
+      } catch (error) {
+        console.error('获取订单数据错误:', error)
+        setOrders([])
+      }
+    }
+
+    fetchOrders()
+  }, [])
+
+  // 获取车型数据
+  useEffect(() => {
+    async function fetchCars() {
+      try {
+        const response = await fetch('/api/dealer/cars')
+        if (response.ok) {
+          const data = await response.json()
+          setCars(data.slice(0, 4)) // 只显示前4个
+        } else {
+          console.error('获取车型数据失败')
+          setCars([])
+        }
+      } catch (error) {
+        console.error('获取车型数据错误:', error)
+        setCars([])
+      }
+    }
+
+    fetchCars()
+  }, [])
+
+  // 获取销售数据
+  useEffect(() => {
+    async function fetchSalesData() {
+      try {
+        const response = await fetch('/api/dealer/sales')
+        if (response.ok) {
+          const data = await response.json()
+          setSalesData(data)
+        } else {
+          console.error('获取销售数据失败')
+          // 保持默认空数据
+        }
+      } catch (error) {
+        console.error('获取销售数据错误:', error)
+        // 保持默认空数据
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchSalesData()
+  }, [])
+
+  // 添加图标到统计数据
+  const statsWithIcons = stats.map(stat => {
+    let icon;
+    switch(stat.title) {
+      case "总销售额":
+        icon = <CreditCard className="h-4 w-4" />;
+        break;
+      case "车型数量":
+        icon = <Car className="h-4 w-4" />;
+        break;
+      case "客户数量":
+        icon = <Users className="h-4 w-4" />;
+        break;
+      case "转化率":
+        icon = <TrendingUp className="h-4 w-4" />;
+        break;
+      default:
+        icon = null;
+    }
+    return { ...stat, icon };
+  });
 
   return (
     <DashboardLayout userType="dealer">
       <div className="space-y-8">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">欢迎回来，豪华汽车4S店</h2>
+          <h2 className="text-3xl font-bold tracking-tight">欢迎回来，{dealerName}</h2>
           <p className="text-muted-foreground">这是您的商家面板，您可以在这里管理车型、订单和查看销售数据。</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat, index) => (
-            <StatsCard
-              key={index}
-              title={stat.title}
-              value={stat.value}
-              description={stat.description}
-              icon={stat.icon}
-              trend={stat.trend}
-            />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">加载数据中...</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {statsWithIcons.map((stat, index) => (
+                <StatsCard
+                  key={index}
+                  title={stat.title}
+                  value={stat.value}
+                  description={stat.description}
+                  icon={stat.icon}
+                  trend={stat.trend}
+                />
+              ))}
+            </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <SalesChart data={salesData} />
-          <RecentOrders orders={orders} userType="dealer" />
-        </div>
+            <div className="grid gap-6 md:grid-cols-2">
+              <SalesChart data={salesData} />
+              <RecentOrders orders={orders} userType="dealer" />
+            </div>
 
-        <CarManagement cars={cars} />
+            <CarManagement cars={cars} />
+          </>
+        )}
       </div>
     </DashboardLayout>
   )

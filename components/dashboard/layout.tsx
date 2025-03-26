@@ -1,8 +1,9 @@
 "use client"
 
-import { type ReactNode, useState } from "react"
+import { type ReactNode, useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useSession } from "next-auth/react"
 import {
   Car,
   User,
@@ -33,6 +34,24 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, userType }: DashboardLayoutProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const { data: session } = useSession()
+  const [userInfo, setUserInfo] = useState({
+    name: userType === "user" ? "用户" : "商家",
+    email: "",
+    avatar: "/placeholder.svg?height=40&width=40"
+  })
+
+  // 从会话中获取用户信息
+  useEffect(() => {
+    if (session?.user) {
+      const name = session.user.name || (userType === "user" ? "用户" : "商家")
+      setUserInfo({
+        name: name,
+        email: session.user.email || "",
+        avatar: session.user.image || "/placeholder.svg?height=40&width=40"
+      })
+    }
+  }, [session, userType])
 
   const userNavItems = [
     {
@@ -106,10 +125,6 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
   ]
 
   const navItems = userType === "user" ? userNavItems : dealerNavItems
-  const userInfo =
-    userType === "user"
-      ? { name: "张先生", email: "zhang@example.com", avatar: "/placeholder.svg?height=40&width=40" }
-      : { name: "豪华汽车4S店", email: "luxury@example.com", avatar: "/placeholder.svg?height=40&width=40" }
 
   return (
     <div className="flex min-h-screen bg-muted/20">
@@ -161,7 +176,7 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
             </div>
             <div className="px-6 py-2">
               <Link
-                href="/"
+                href="/api/auth/signout"
                 className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
               >
                 <LogOut className="h-5 w-5" />
@@ -207,7 +222,7 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
         </div>
         <div className="mt-auto p-6">
           <Link
-            href="/"
+            href="/api/auth/signout"
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
           >
             <LogOut className="h-5 w-5" />

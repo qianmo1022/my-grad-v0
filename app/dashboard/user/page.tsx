@@ -1,124 +1,212 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import DashboardLayout from "@/components/dashboard/layout"
 import StatsCard from "@/components/dashboard/stats-card"
 import RecentOrders from "@/components/dashboard/recent-orders"
 import SavedConfigs from "@/components/dashboard/saved-configs"
-import { Car, ShoppingCart, Heart, Clock } from "lucide-react"
 import RecommendedCars from "@/components/dashboard/recommended-cars"
-import { getRecommendedCars } from "@/lib/recommendation"
+import { Car, ShoppingCart, Heart, Clock } from "lucide-react"
+import { useSession } from "next-auth/react"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function UserDashboard() {
-  // 模拟数据
-  const stats = [
-    {
-      title: "已保存配置",
-      value: "5",
-      icon: <Car className="h-4 w-4" />,
-      trend: { value: 12, isPositive: true },
-    },
-    {
-      title: "订单总数",
-      value: "8",
-      icon: <ShoppingCart className="h-4 w-4" />,
-      trend: { value: 5, isPositive: true },
-    },
-    {
-      title: "收藏车型",
-      value: "12",
-      icon: <Heart className="h-4 w-4" />,
-      trend: { value: 3, isPositive: true },
-    },
-    {
-      title: "最近浏览",
-      value: "24",
-      icon: <Clock className="h-4 w-4" />,
-      description: "过去30天内",
-      trend: { value: 8, isPositive: true },
-    },
-  ]
+  const { data: session } = useSession();
+  const { toast } = useToast();
+  
+  // 状态管理
+  const [stats, setStats] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [savedConfigs, setSavedConfigs] = useState<any[]>([]);
+  const [recommendedCars, setRecommendedCars] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [userName, setUserName] = useState<string>("用户");
 
-  const orders = [
-    {
-      id: "ORD-001",
-      car: "豪华轿车 - 高配版",
-      date: "2023-11-15",
-      amount: "¥385,000",
-      status: "completed" as const,
-    },
-    {
-      id: "ORD-002",
-      car: "城市SUV - 标准版",
-      date: "2023-12-03",
-      amount: "¥292,000",
-      status: "processing" as const,
-    },
-    {
-      id: "ORD-003",
-      car: "跑车系列 - 性能版",
-      date: "2024-01-10",
-      amount: "¥665,000",
-      status: "pending" as const,
-    },
-  ]
+  // 获取用户姓名
+  useEffect(() => {
+    if (session?.user) {
+      // 使用会话中的姓名，或从姓名中提取姓氏
+      const name = session.user.name || "";
+      setUserName(name.split(' ')[0] || "用户");
+    }
+  }, [session]);
 
-  const savedConfigs = [
-    {
-      id: "CFG-001",
-      carName: "豪华轿车 - 个性定制",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      date: "2023-12-20",
-      price: "¥398,000",
-    },
-    {
-      id: "CFG-002",
-      carName: "城市SUV - 家庭版",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      date: "2024-01-05",
-      price: "¥312,000",
-    },
-    {
-      id: "CFG-003",
-      carName: "跑车系列 - 赛道版",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      date: "2024-01-18",
-      price: "¥688,000",
-    },
-    {
-      id: "CFG-004",
-      carName: "豪华轿车 - 商务版",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      date: "2024-02-02",
-      price: "¥372,000",
-    },
-  ]
+  // 获取统计数据
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const response = await fetch('/api/user/stats');
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
+        } else {
+          console.error('获取统计数据失败');
+          // 设置默认统计数据
+          setStats([
+            {
+              title: "已保存配置",
+              value: "0",
+              icon: <Car className="h-4 w-4" />,
+              trend: { value: 0, isPositive: true },
+            },
+            {
+              title: "订单总数",
+              value: "0",
+              icon: <ShoppingCart className="h-4 w-4" />,
+              trend: { value: 0, isPositive: true },
+            },
+            {
+              title: "收藏车型",
+              value: "0",
+              icon: <Heart className="h-4 w-4" />,
+              trend: { value: 0, isPositive: true },
+            },
+            {
+              title: "最近浏览",
+              value: "0",
+              icon: <Clock className="h-4 w-4" />,
+              description: "过去30天内",
+              trend: { value: 0, isPositive: true },
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error('获取统计数据错误:', error);
+        toast({
+          title: "数据加载失败",
+          description: "无法加载统计数据，请稍后重试",
+          variant: "destructive",
+        });
+      }
+    }
+
+    fetchStats();
+  }, [toast]);
+
+  // 获取订单数据
+  useEffect(() => {
+    async function fetchOrders() {
+      try {
+        const response = await fetch('/api/user/orders?limit=3');
+        if (response.ok) {
+          const data = await response.json();
+          setOrders(data);
+        } else {
+          console.error('获取订单数据失败');
+          setOrders([]);
+        }
+      } catch (error) {
+        console.error('获取订单数据错误:', error);
+        setOrders([]);
+      }
+    }
+
+    fetchOrders();
+  }, []);
+
+  // 获取保存的配置
+  useEffect(() => {
+    async function fetchSavedConfigs() {
+      try {
+        const response = await fetch('/api/user/configurations?limit=4');
+        if (response.ok) {
+          const data = await response.json();
+          setSavedConfigs(data);
+        } else {
+          console.error('获取保存的配置失败');
+          setSavedConfigs([]);
+        }
+      } catch (error) {
+        console.error('获取保存的配置错误:', error);
+        setSavedConfigs([]);
+      }
+    }
+
+    fetchSavedConfigs();
+  }, []);
+
+  // 获取推荐车型
+  useEffect(() => {
+    async function fetchRecommendedCars() {
+      try {
+        const response = await fetch('/api/cars/recommended?limit=3');
+        if (response.ok) {
+          const data = await response.json();
+          setRecommendedCars(data);
+        } else {
+          console.error('获取推荐车型失败');
+          setRecommendedCars([]);
+        }
+      } catch (error) {
+        console.error('获取推荐车型错误:', error);
+        setRecommendedCars([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchRecommendedCars();
+  }, []);
+
+  // 添加图标到统计数据
+  const statsWithIcons = stats.map(stat => {
+    let icon;
+    switch(stat.title) {
+      case "已保存配置":
+        icon = <Car className="h-4 w-4" />;
+        break;
+      case "订单总数":
+        icon = <ShoppingCart className="h-4 w-4" />;
+        break;
+      case "收藏车型":
+        icon = <Heart className="h-4 w-4" />;
+        break;
+      case "最近浏览":
+        icon = <Clock className="h-4 w-4" />;
+        break;
+      default:
+        icon = null;
+    }
+    return { ...stat, icon };
+  });
 
   return (
     <DashboardLayout userType="user">
       <div className="space-y-8">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">欢迎回来，张先生</h2>
+          <h2 className="text-3xl font-bold tracking-tight">欢迎回来，{userName}先生</h2>
           <p className="text-muted-foreground">这是您的用户面板，您可以在这里管理您的汽车配置和订单。</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat, index) => (
-            <StatsCard
-              key={index}
-              title={stat.title}
-              value={stat.value}
-              description={stat.description}
-              icon={stat.icon}
-              trend={stat.trend}
-            />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">加载数据中...</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {statsWithIcons.map((stat, index) => (
+                <StatsCard
+                  key={index}
+                  title={stat.title}
+                  value={stat.value}
+                  description={stat.description}
+                  icon={stat.icon}
+                  trend={stat.trend}
+                />
+              ))}
+            </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <SavedConfigs configs={savedConfigs} />
-          <RecentOrders orders={orders} userType="user" />
-        </div>
-        <div className="mt-6">
-          <RecommendedCars cars={getRecommendedCars(3)} />
-        </div>
+            <div className="grid gap-6 md:grid-cols-2">
+              <SavedConfigs configs={savedConfigs} />
+              <RecentOrders orders={orders} userType="user" />
+            </div>
+
+            <div className="mt-6">
+              <RecommendedCars cars={recommendedCars} />
+            </div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   )

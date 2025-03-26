@@ -23,6 +23,8 @@ model User {
   browsingHistory    BrowsingHistory[]
   savedConfigurations SavedConfiguration[]
   orders             Order[]
+  reviews            Review[]            // 用户评价
+  notifications      Notification[]      // 用户通知
 }
 
 // 商家模型
@@ -51,6 +53,9 @@ model Car {
   browsingHistory    BrowsingHistory[]
   savedConfigurations SavedConfiguration[]
   orders             Order[]
+  features           CarFeature[]         // 车型特性
+  configOptions      CarConfigOption[]    // 车型配置选项
+  reviews            Review[]             // 车型评价
 }
 
 // 用户偏好模型
@@ -117,4 +122,99 @@ model Order {
   @@index([userId])
   @@index([dealerId])
   @@index([carId])
+}
+
+// 车型特性模型
+model CarFeature {
+  id        String   @id @default(uuid())
+  featureKey String  // 特性的键，如 acceleration, handling 等
+  name      String   // 特性的显示名称
+  score     Int      // 1-5 的分数
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  carId     String
+
+  @@index([carId])
+  @@unique([carId, featureKey])
+}
+
+// 车型配置选项分类模型
+model CarConfigCategory {
+  id          String            @id @default(uuid())
+  categoryKey String            // 分类的键，如 exterior-color, wheels 等
+  name        String            // 分类的显示名称
+  description String            // 分类的描述
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  options     CarConfigOption[]
+
+  @@unique([categoryKey])
+}
+
+// 车型配置选项模型
+model CarConfigOption {
+  id          String           @id @default(uuid())
+  optionKey   String           // 选项的键，如 black, sport 等
+  name        String           // 选项的显示名称
+  description String           // 选项的描述
+  price       Float            // 选项的额外价格
+  thumbnail   String?          // 选项的缩略图
+  colorCode   String?          // 颜色代码（仅适用于颜色选项）
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  car         Car              @relation(fields: [carId], references: [id], onDelete: Cascade)
+  carId       String
+  category    CarConfigCategory @relation(fields: [categoryId], references: [id])
+  categoryId  String
+
+  @@index([carId])
+  @@index([categoryId])
+  @@unique([carId, categoryId, optionKey])
+}
+
+// 评价模型
+model Review {
+  id             String   @id @default(uuid())
+  title          String
+  content        String   @db.Text
+  rating         Int      // 1-5星
+  helpful        Int      @default(0) // 有帮助数量
+  verified       Boolean  @default(false) // 是否是已验证购买
+  images         String[] // 评价图片URL列表
+  tags           String[] // 评价标签
+  configurationId String?  // 关联的配置ID（可选）
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String
+  car            Car      @relation(fields: [carId], references: [id])
+  carId          String
+
+  @@index([userId])
+  @@index([carId])
+}
+
+// 通知类型枚举
+enum NotificationType {
+  SYSTEM
+  ORDER
+  REVIEW
+  PROMOTION
+}
+
+// 通知模型
+model Notification {
+  id        String           @id @default(uuid())
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  read      Boolean          @default(false) // 是否已读
+  link      String?          // 相关链接（可选）
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  @@index([userId])
 }
