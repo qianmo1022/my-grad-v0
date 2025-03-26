@@ -56,12 +56,6 @@ export default function UserDashboard() {
               trend: { value: 0, isPositive: true },
             },
             {
-              title: "收藏车型",
-              value: "0",
-              icon: <Heart className="h-4 w-4" />,
-              trend: { value: 0, isPositive: true },
-            },
-            {
               title: "最近浏览",
               value: "0",
               icon: <Clock className="h-4 w-4" />,
@@ -157,9 +151,6 @@ export default function UserDashboard() {
         break;
       case "订单总数":
         icon = <ShoppingCart className="h-4 w-4" />;
-        break;
-      case "收藏车型":
-        icon = <Heart className="h-4 w-4" />;
         break;
       case "最近浏览":
         icon = <Clock className="h-4 w-4" />;

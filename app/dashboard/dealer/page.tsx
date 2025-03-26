@@ -13,7 +13,6 @@ import { Car, Users, CreditCard, TrendingUp } from "lucide-react"
 export default function DealerDashboard() {
   const { data: session, status } = useSession()
   const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState<boolean>(true)
   const [stats, setStats] = useState<any[]>([])
   const [orders, setOrders] = useState<any[]>([])
   const [cars, setCars] = useState<any[]>([])
@@ -23,6 +22,7 @@ export default function DealerDashboard() {
     yearly: []
   })
   const [dealerName, setDealerName] = useState<string>("商家")
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
   // 获取商家名称
   useEffect(() => {

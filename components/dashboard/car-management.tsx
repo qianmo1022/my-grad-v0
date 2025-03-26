@@ -18,7 +18,7 @@ interface CarManagementProps {
   cars: Car[]
 }
 
-export default function CarManagement({ cars }: CarManagementProps) {
+export default function CarManagement({ cars = [] }: CarManagementProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -48,12 +48,12 @@ export default function CarManagement({ cars }: CarManagementProps) {
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="relative h-10 w-16 rounded overflow-hidden">
-                      <Image src={car.thumbnail || "/placeholder.svg"} alt={car.name} fill className="object-cover" />
+                      <Image src={car.thumbnail || "/placeholder.svg"} alt={car.name || ""} fill className="object-cover" />
                     </div>
-                    <span className="font-medium">{car.name}</span>
+                    <span className="font-medium">{car.name || ""}</span>
                   </div>
                 </TableCell>
-                <TableCell>{car.basePrice}</TableCell>
+                <TableCell>{car.basePrice || "¥0"}</TableCell>
                 <TableCell>
                   <Badge
                     variant="outline"
@@ -70,7 +70,7 @@ export default function CarManagement({ cars }: CarManagementProps) {
                     {car.status === "archived" && "已归档"}
                   </Badge>
                 </TableCell>
-                <TableCell>{car.sales}台</TableCell>
+                <TableCell>{car.sales || 0}台</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button variant="ghost" size="sm">

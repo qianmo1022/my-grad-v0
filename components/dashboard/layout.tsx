@@ -70,11 +70,6 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
       icon: <ShoppingCart className="h-5 w-5" />,
     },
     {
-      title: "收藏车型",
-      href: "/dashboard/user/favorites",
-      icon: <Heart className="h-5 w-5" />,
-    },
-    {
       title: "我的评价",
       href: "/dashboard/user/reviews",
       icon: <MessageSquare className="h-5 w-5" />,

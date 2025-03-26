@@ -76,11 +76,6 @@ export async function GET() {
         trend: { value: Math.floor(Math.random() * 10), isPositive: Math.random() > 0.3 },
       },
       {
-        title: "收藏车型",
-        value: favoritesCount.toString(),
-        trend: { value: Math.floor(Math.random() * 15), isPositive: Math.random() > 0.3 },
-      },
-      {
         title: "最近浏览",
         value: recentBrowsingCount.toString(),
         description: "过去30天内",
