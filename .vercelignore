@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+node_modules
+.next
+build
+dist
+coverage
+.git
+.gitignore
+README.md
+*.log
+.DS_Store 

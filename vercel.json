@@ -1,4 +1,5 @@
 {
+  "version": 2,
   "buildCommand": "pnpm run build",
   "installCommand": "pnpm install",
   "framework": "nextjs",
@@ -10,5 +11,10 @@
   ],
   "env": {
     "DATABASE_URL": "@database_url"
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
   }
 } 
