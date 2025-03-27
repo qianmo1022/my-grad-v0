@@ -9,6 +9,7 @@ import RecentOrders from "@/components/dashboard/recent-orders"
 import CarManagement from "@/components/dashboard/car-management"
 import SalesChart from "@/components/dashboard/sales-chart"
 import { Car, Users, CreditCard, TrendingUp } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function DealerDashboard() {
   const { data: session, status } = useSession()
@@ -193,8 +194,43 @@ export default function DealerDashboard() {
   if (status === "loading") {
     return (
       <DashboardLayout userType="dealer">
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">加载中...</p>
+        <div className="space-y-8">
+          <div>
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-96 mt-2" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="p-6 rounded-lg border bg-card">
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-8 w-32 mb-4" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ))}
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="p-6 rounded-lg border bg-card">
+              <Skeleton className="h-6 w-32 mb-4" />
+              <Skeleton className="h-4 w-48 mb-6" />
+              <Skeleton className="h-[200px]" />
+            </div>
+            <div className="p-6 rounded-lg border bg-card">
+              <Skeleton className="h-6 w-32 mb-4" />
+              <Skeleton className="h-4 w-48 mb-6" />
+              <Skeleton className="h-[200px]" />
+            </div>
+          </div>
+          <div className="p-6 rounded-lg border bg-card">
+            <Skeleton className="h-6 w-32 mb-4" />
+            <Skeleton className="h-4 w-48 mb-6" />
+            <div className="space-y-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <Skeleton className="h-10 w-48" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -219,8 +255,39 @@ export default function DealerDashboard() {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">加载数据中...</p>
+          <div className="space-y-8">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="p-6 rounded-lg border bg-card">
+                  <Skeleton className="h-4 w-24 mb-2" />
+                  <Skeleton className="h-8 w-32 mb-4" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
+            </div>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="p-6 rounded-lg border bg-card">
+                <Skeleton className="h-6 w-32 mb-4" />
+                <Skeleton className="h-4 w-48 mb-6" />
+                <Skeleton className="h-[200px]" />
+              </div>
+              <div className="p-6 rounded-lg border bg-card">
+                <Skeleton className="h-6 w-32 mb-4" />
+                <Skeleton className="h-4 w-48 mb-6" />
+                <Skeleton className="h-[200px]" />
+              </div>
+            </div>
+            <div className="p-6 rounded-lg border bg-card">
+              <Skeleton className="h-6 w-32 mb-4" />
+              <Skeleton className="h-4 w-48 mb-6" />
+              <div className="space-y-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <Skeleton className="h-10 w-48" />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
           <>
@@ -242,7 +309,7 @@ export default function DealerDashboard() {
               <RecentOrders orders={orders} userType="dealer" />
             </div>
 
-            <CarManagement cars={cars} />
+            <CarManagement cars={cars} isLoading={isLoading} />
           </>
         )}
       </div>

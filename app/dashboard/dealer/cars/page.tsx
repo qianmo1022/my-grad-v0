@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/dashboard/layout"
 import CarManagement from "@/components/dashboard/car-management"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function DealerCars() {
   const { toast } = useToast()
@@ -87,8 +88,30 @@ export default function DealerCars() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">加载数据中...</p>
+              <div className="space-y-6">
+                <div className="flex space-x-2">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-24" />
+                  ))}
+                </div>
+                <div className="space-y-4">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <Skeleton className="h-16 w-24 rounded" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <Skeleton className="h-8 w-16" />
+                        <Skeleton className="h-8 w-8" />
+                        <Skeleton className="h-8 w-8" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <Tabs defaultValue="all">
