@@ -79,13 +79,14 @@ const getSavedConfig = (configId: string) => {
 }
 
 interface SavedConfigPageProps {
-  params: {
+  params: Promise<{
     configId: string
-  }
+  }>
 }
 
 export default function SavedConfigPage({ params }: SavedConfigPageProps) {
-  const { configId } = params
+  const unwrappedParams = React.use(params)
+  const configId = unwrappedParams.configId
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("")

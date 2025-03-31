@@ -83,14 +83,17 @@ const getSavedConfig = (configId: string) => {
   return mockSavedConfigs.find((config) => config.id === configId)
 }
 
+// 定义更精确的类型
 interface CheckoutPageProps {
-  params: {
+  params: Promise<{
     configId: string
-  }
+  }>
 }
 
 export default function CheckoutPage({ params }: CheckoutPageProps) {
-  const { configId } = params
+  // 使用 React.use() 解包 params
+  const unwrappedParams = React.use(params)
+  const configId = unwrappedParams.configId
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
