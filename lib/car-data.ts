@@ -268,7 +268,9 @@ export function getCarConfigOptions(carId: string): ConfigCategory[] {
 }
 
 // 获取特定车型信息
-export function getCarById(carId: string): CarModel | undefined {
-  return carModels.find((car) => car.id === carId)
+export async function getCarById(carId: string): Promise<CarModel | undefined> {
+  // 模拟异步操作
+  await new Promise(resolve => setTimeout(resolve, 100))
+  return carModels.find(car => car.id === carId)
 }
 

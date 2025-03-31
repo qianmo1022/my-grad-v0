@@ -1,8 +1,8 @@
 "use client"
 
-import { Suspense, useState, useEffect, useRef } from "react"
+import { Suspense, useState } from "react"
 import { Canvas } from "@react-three/fiber"
-import { OrbitControls, PerspectiveCamera, Environment, useGLTF } from "@react-three/drei"
+import { OrbitControls, PerspectiveCamera, Environment, Box } from "@react-three/drei"
 import { Button } from "@/components/ui/button"
 import { RotateCw, ZoomIn, ZoomOut } from "lucide-react"
 
@@ -48,31 +48,31 @@ export default function CarViewer({ carColor }: CarViewerProps) {
   )
 }
 
-// 3D车辆模型组件
 function Car({ color }: { color: string }) {
-  // 使用示例模型 - 在实际应用中应替换为真实的汽车模型
-  const { scene } = useGLTF("/assets/3d/duck.glb")
-  const previousColor = useRef(color)
-
-  useEffect(() => {
-    // 只在颜色真正变化时更新材质，避免不必要的更新
-    if (previousColor.current !== color) {
-      // 在实际应用中，这里应该更新汽车模型的材质颜色
-      scene.traverse((child: any) => {
-        if (child.isMesh && child.material) {
-          // 这里只是示例，实际应用中应该根据模型结构来更新特定部分的颜色
-          if (child.material.name === "body" || child.name.includes("body")) {
-            child.material.color.set(color)
-          }
-        }
-      })
-      previousColor.current = color
-    }
-  }, [color, scene])
-
-  return <primitive object={scene} scale={2} position={[0, -1, 0]} rotation={[0, Math.PI / 4, 0]} />
+  return (
+    <group>
+      {/* 车身 */}
+      <Box args={[2, 0.5, 4]} position={[0, 0.5, 0]}>
+        <meshStandardMaterial color={color} />
+      </Box>
+      {/* 车顶 */}
+      <Box args={[1.5, 1, 2]} position={[0, 1.25, 0]}>
+        <meshStandardMaterial color={color} />
+      </Box>
+      {/* 车轮 */}
+      <Box args={[0.4, 0.4, 0.4]} position={[-1, 0.2, -1.5]}>
+        <meshStandardMaterial color="#333333" />
+      </Box>
+      <Box args={[0.4, 0.4, 0.4]} position={[1, 0.2, -1.5]}>
+        <meshStandardMaterial color="#333333" />
+      </Box>
+      <Box args={[0.4, 0.4, 0.4]} position={[-1, 0.2, 1.5]}>
+        <meshStandardMaterial color="#333333" />
+      </Box>
+      <Box args={[0.4, 0.4, 0.4]} position={[1, 0.2, 1.5]}>
+        <meshStandardMaterial color="#333333" />
+      </Box>
+    </group>
+  )
 }
-
-// 预加载模型
-useGLTF.preload("/assets/3d/duck.glb")
 

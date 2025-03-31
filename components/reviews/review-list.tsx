@@ -122,7 +122,7 @@ export default function ReviewList({ carId, limit, showViewAll = true }: ReviewL
 
                   <div className="space-y-2">
                     {ratingDistribution.map((count, index) => {
-                      const starRating = 5 - index
+                      const starRating = index + 1
                       const percentage = calculatePercentage(count)
 
                       return (

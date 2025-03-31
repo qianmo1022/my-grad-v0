@@ -11,6 +11,7 @@ import PriceSummary from "./price-summary"
 import CarViewer from "./car-viewer"
 import { getRecommendedOptions } from "@/lib/recommendation"
 import RecommendedOptions from "./recommended-options"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface ConfiguratorProps {
   carId: string
@@ -18,13 +19,25 @@ interface ConfiguratorProps {
 
 export default function Configurator({ carId }: ConfiguratorProps) {
   const router = useRouter()
-  const car = getCarById(carId)
-  const configCategories = getCarConfigOptions(carId)
-
+  const [car, setCar] = useState<any>(null)
+  const [configCategories, setConfigCategories] = useState(getCarConfigOptions(carId))
   const [activeTab, setActiveTab] = useState(configCategories[0]?.id || "")
   const [selectedOptions, setSelectedOptions] = useState<Record<string, ConfigOption>>({})
-  const [totalPrice, setTotalPrice] = useState(car?.basePrice || 0)
+  const [totalPrice, setTotalPrice] = useState(0)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // 加载汽车数据
+  useEffect(() => {
+    const loadCarData = async () => {
+      setIsLoading(true)
+      const carData = await getCarById(carId)
+      setCar(carData)
+      setTotalPrice(carData?.basePrice || 0)
+      setIsLoading(false)
+    }
+    loadCarData()
+  }, [carId])
 
   // 初始化选择的配置（每个类别的第一个选项）- 只在组件挂载和carId/configCategories变化时执行一次
   useEffect(() => {
@@ -65,7 +78,25 @@ export default function Configurator({ carId }: ConfiguratorProps) {
     return colorOption?.colorCode || car?.defaultColor || "#000000"
   }
 
-  if (!car) return null
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <Skeleton className="h-12 w-64 mb-8" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <Skeleton className="h-[500px] col-span-2" />
+          <div className="space-y-6">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!car) {
+    return null
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -102,18 +133,20 @@ export default function Configurator({ carId }: ConfiguratorProps) {
 
             {configCategories.map((category) => (
               <TabsContent key={category.id} value={category.id} className="pt-4">
-                <ConfigOptions
-                  category={category}
-                  selectedOption={selectedOptions[category.id]}
-                  onOptionChange={(option) => handleOptionChange(category.id, option)}
-                />
-                {activeTab && selectedOptions[activeTab] && (
-                  <RecommendedOptions
-                    options={getRecommendedOptions(carId, activeTab)}
-                    selectedOption={selectedOptions[activeTab]}
-                    onOptionSelect={(option) => handleOptionChange(activeTab, option)}
+                <div className="h-[calc(100vh-600px)] overflow-y-auto pr-4">
+                  <ConfigOptions
+                    category={category}
+                    selectedOption={selectedOptions[category.id]}
+                    onOptionChange={(option) => handleOptionChange(category.id, option)}
                   />
-                )}
+                  {activeTab && selectedOptions[activeTab] && (
+                    <RecommendedOptions
+                      options={getRecommendedOptions(carId, activeTab)}
+                      selectedOption={selectedOptions[activeTab]}
+                      onOptionSelect={(option) => handleOptionChange(activeTab, option)}
+                    />
+                  )}
+                </div>
               </TabsContent>
             ))}
           </Tabs>

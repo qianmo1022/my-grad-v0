@@ -11,8 +11,8 @@ interface NewReviewPageProps {
   }
 }
 
-export default function NewReviewPage({ params }: NewReviewPageProps) {
-  const car = getCarById(params.carId)
+export default async function NewReviewPage({ params }: NewReviewPageProps) {
+  const car = await getCarById(params.carId)
 
   if (!car) {
     notFound()

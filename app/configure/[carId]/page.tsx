@@ -11,8 +11,8 @@ interface ConfigurePageProps {
   }
 }
 
-export default function ConfigurePage({ params }: ConfigurePageProps) {
-  const car = getCarById(params.carId)
+export default async function ConfigurePage({ params }: ConfigurePageProps) {
+  const car = await getCarById(params.carId)
 
   if (!car) {
     notFound()

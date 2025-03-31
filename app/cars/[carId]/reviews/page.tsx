@@ -11,8 +11,8 @@ interface ReviewsPageProps {
   }
 }
 
-export default function ReviewsPage({ params }: ReviewsPageProps) {
-  const car = getCarById(params.carId)
+export default async function ReviewsPage({ params }: ReviewsPageProps) {
+  const car = await getCarById(params.carId)
 
   if (!car) {
     notFound()
