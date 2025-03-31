@@ -60,6 +60,11 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
       icon: <BarChart3 className="h-5 w-5" />,
     },
     {
+      title: "浏览车型",
+      href: "/cars",
+      icon: <Car className="h-5 w-5" />,
+    },
+    {
       title: "我的配置",
       href: "/dashboard/user/configurations",
       icon: <Car className="h-5 w-5" />,

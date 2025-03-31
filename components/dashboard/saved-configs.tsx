@@ -42,16 +42,18 @@ export default function SavedConfigs({ configs }: SavedConfigsProps) {
                   <p className="font-medium">{config.price}</p>
                 </div>
                 <div className="flex gap-2 mt-4">
-                  <Link href={`/configure/${config.id}`} className="flex-1">
+                  <Link href={`/configure/saved/${config.id}`} className="flex-1">
                     <Button variant="outline" size="sm" className="w-full">
                       <Eye className="h-4 w-4 mr-1" />
                       查看
                     </Button>
                   </Link>
-                  <Button variant="default" size="sm" className="flex-1">
-                    <ShoppingCart className="h-4 w-4 mr-1" />
-                    购买
-                  </Button>
+                  <Link href={`/checkout/${config.id}`} className="flex-1">
+                    <Button variant="default" size="sm" className="w-full">
+                      <ShoppingCart className="h-4 w-4 mr-1" />
+                      购买
+                    </Button>
+                  </Link>
                   <Button variant="ghost" size="sm" className="px-2">
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>

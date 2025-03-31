@@ -6,6 +6,7 @@ import { getCarById, getCarConfigOptions, type ConfigOption } from "@/lib/car-da
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, ShoppingCart, Save } from "lucide-react"
+import { useSession } from "next-auth/react"
 import ConfigOptions from "./config-options"
 import PriceSummary from "./price-summary"
 import CarViewer from "./car-viewer"
@@ -19,6 +20,7 @@ interface ConfiguratorProps {
 
 export default function Configurator({ carId }: ConfiguratorProps) {
   const router = useRouter()
+  const { data: session } = useSession()
   const [car, setCar] = useState<any>(null)
   const [configCategories, setConfigCategories] = useState(getCarConfigOptions(carId))
   const [activeTab, setActiveTab] = useState(configCategories[0]?.id || "")
@@ -70,6 +72,36 @@ export default function Configurator({ carId }: ConfiguratorProps) {
       ...prev,
       [categoryId]: option,
     }))
+  }
+
+  // 处理保存配置
+  const handleSaveConfig = async () => {
+    if (!session || !car) return;
+    
+    try {
+      const response = await fetch('/api/configurations/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: session.user.id,
+          carId: car.id,
+          options: selectedOptions,
+          basePrice: car.basePrice,
+          totalPrice: totalPrice
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('保存配置失败');
+      }
+
+      const data = await response.json();
+      router.push(`/configure/saved/${data.id}`);
+    } catch (error) {
+      console.error('保存配置时出错:', error);
+    }
   }
 
   // 获取当前选择的颜色
@@ -156,7 +188,7 @@ export default function Configurator({ carId }: ConfiguratorProps) {
 
           {/* 操作按钮 */}
           <div className="flex gap-4">
-            <Button className="flex-1 gap-2">
+            <Button className="flex-1 gap-2" variant="outline" onClick={handleSaveConfig}>
               <Save className="h-4 w-4" />
               保存配置
             </Button>
