@@ -12,70 +12,24 @@ import PriceSummary from "@/components/configurator/price-summary"
 import CarImageViewer from "@/components/configurator/car-image-viewer"
 import { useToast } from "@/components/ui/use-toast"
 
-// 模拟获取已保存配置的函数
-const getSavedConfig = (configId: string) => {
+// 从API获取已保存配置的函数
+const getSavedConfig = async (configId: string) => {
   if (!configId) {
     throw new Error("configId不能为空");
   }
   
-  // 这里应该从API获取已保存的配置
-  // 现在使用模拟数据
-  const mockSavedConfigs = [
-    {
-      id: "CFG-001",
-      carId: "luxury-sedan",
-      carName: "豪华轿车 - 个性定制",
-      date: "2023-12-20",
-      price: 398000,
-      options: {
-        "exterior-color": "black",
-        wheels: "luxury",
-        interior: "premium-leather",
-        "tech-package": "advanced-tech",
-      },
-    },
-    {
-      id: "CFG-002",
-      carId: "city-suv",
-      carName: "城市SUV - 家庭版",
-      date: "2024-01-05",
-      price: 312000,
-      options: {
-        "exterior-color": "silver",
-        wheels: "sport",
-        interior: "leather",
-        roof: "panoramic",
-      },
-    },
-    {
-      id: "CFG-003",
-      carId: "sports-car",
-      carName: "跑车系列 - 赛道版",
-      date: "2024-01-18",
-      price: 688000,
-      options: {
-        "exterior-color": "red",
-        wheels: "sport",
-        performance: "track-performance",
-        interior: "premium-sport",
-      },
-    },
-    {
-      id: "CFG-004",
-      carId: "luxury-sedan",
-      carName: "豪华轿车 - 商务版",
-      date: "2024-02-02",
-      price: 372000,
-      options: {
-        "exterior-color": "blue",
-        wheels: "standard",
-        interior: "leather",
-        "tech-package": "standard-tech",
-      },
-    },
-  ]
-
-  return mockSavedConfigs.find((config) => config.id === configId)
+  try {
+    const response = await fetch(`/api/configurations/${configId}`);
+    
+    if (!response.ok) {
+      throw new Error('获取配置失败');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('获取保存的配置失败:', error);
+    throw error;
+  }
 }
 
 interface SavedConfigPageProps {
@@ -98,38 +52,57 @@ export default function SavedConfigPage({ params }: SavedConfigPageProps) {
   useEffect(() => {
     // 定义异步函数来加载数据
     const loadData = async () => {
-      // 获取已保存的配置
-      const config = getSavedConfig(configId)
-      if (!config) {
-        return notFound()
-      }
-
-      setSavedConfig(config)
-
-      // 获取车型信息和配置选项
-      const car = await getCarById(config.carId)
-      if (!car) {
-        return notFound()
-      }
-
-      const configCategories = getCarConfigOptions(config.carId)
-      const initialOptions: Record<string, ConfigOption> = {}
-
-      // 设置已保存的选项
-      configCategories.forEach((category) => {
-        const savedOptionId = config.options[category.id as keyof typeof config.options]
-        if (savedOptionId) {
-          const option = category.options.find((opt) => opt.id === savedOptionId)
-          if (option) {
-            initialOptions[category.id] = option
-          }
+      try {
+        // 获取已保存的配置
+        const config = await getSavedConfig(configId)
+        if (!config) {
+          return notFound()
         }
-      })
 
-      setSelectedOptions(initialOptions)
-      setTotalPrice(config.price)
-      setActiveTab(configCategories[0]?.id || "")
-      setIsLoading(false)
+        setSavedConfig(config)
+
+        // 获取车型信息和配置选项
+        const car = await getCarById(config.carId)
+        if (!car) {
+          return notFound()
+        }
+
+        const configCategories = getCarConfigOptions(config.carId)
+        const initialOptions: Record<string, ConfigOption> = {}
+
+        // 设置已保存的选项
+        configCategories.forEach((category) => {
+          // 检查保存的选项是否为对象或ID字符串
+          const savedOption = config.options[category.id as keyof typeof config.options]
+          if (savedOption) {
+            if (typeof savedOption === 'string') {
+              // 如果是ID字符串，查找对应的选项对象
+              const option = category.options.find((opt) => opt.id === savedOption)
+              if (option) {
+                initialOptions[category.id] = option
+              }
+            } else if (typeof savedOption === 'object' && savedOption.id) {
+              // 如果已经是对象，查找完整的选项对象以获取所有属性
+              const option = category.options.find((opt) => opt.id === savedOption.id)
+              if (option) {
+                initialOptions[category.id] = option
+              }
+            }
+          }
+        })
+
+        setSelectedOptions(initialOptions)
+        setTotalPrice(config.price)
+        setActiveTab(configCategories[0]?.id || "")
+        setIsLoading(false)
+      } catch (error) {
+        console.error('加载配置数据失败:', error)
+        toast({
+          title: "加载失败",
+          description: "无法加载配置数据，请稍后再试",
+          variant: "destructive"
+        })
+      }
     }
     
     // 调用异步函数

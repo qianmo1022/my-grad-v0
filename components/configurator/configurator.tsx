@@ -87,7 +87,10 @@ export default function Configurator({ carId }: ConfiguratorProps) {
         body: JSON.stringify({
           userId: session.user.id,
           carId: car.id,
-          options: selectedOptions,
+          options: Object.entries(selectedOptions).reduce((acc, [key, value]) => {
+            acc[key] = value.id;
+            return acc;
+          }, {} as Record<string, string>),
           basePrice: car.basePrice,
           totalPrice: totalPrice
         }),
@@ -101,6 +104,35 @@ export default function Configurator({ carId }: ConfiguratorProps) {
       router.push(`/configure/saved/${data.id}`);
     } catch (error) {
       console.error('保存配置时出错:', error);
+    }
+  }
+
+  // 处理下单预定
+  const handleOrder = async () => {
+    if (!session || !car) return;
+    
+    try {
+      const response = await fetch('/api/configurations/order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: session.user.id,
+          carId: car.id,
+          options: selectedOptions,
+          totalPrice: totalPrice
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('下单预定失败');
+      }
+
+      const data = await response.json();
+      router.push(`/checkout/${data.id}`);
+    } catch (error) {
+      console.error('下单预定时出错:', error);
     }
   }
 
@@ -192,7 +224,7 @@ export default function Configurator({ carId }: ConfiguratorProps) {
               <Save className="h-4 w-4" />
               保存配置
             </Button>
-            <Button className="flex-1 gap-2" variant="default">
+            <Button className="flex-1 gap-2" variant="default" onClick={handleOrder}>
               <ShoppingCart className="h-4 w-4" />
               下单预定
             </Button>

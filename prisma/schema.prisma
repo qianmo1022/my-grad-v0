@@ -135,6 +135,7 @@ model BrowsingHistory {
 model SavedConfiguration {
   id        String   @id @default(uuid())
   options   Json     // 存储为JSON格式的配置选项
+  totalPrice Float   @default(0) // 配置的总价
   timestamp DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

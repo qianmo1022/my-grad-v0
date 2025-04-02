@@ -40,9 +40,10 @@ export async function GET(request: Request) {
     
     // 转换数据为前端所需格式
     const formattedConfigs = savedConfigurations.map(config => {
-      // 计算总价
+      // 使用保存的总价，如果没有则使用基础价格
       const options = config.options as Record<string, string>;
-      let totalPrice = config.car.basePrice;
+      // @ts-ignore - 由于schema更新，totalPrice可能在类型中不存在，但数据库中已存在
+      const totalPrice = config.totalPrice !== undefined ? config.totalPrice : config.car.basePrice;
       
       // 格式化响应
       return {
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
     
     // 获取请求体
     const body = await request.json();
-    const { carId, options } = body;
+    const { carId, options, totalPrice } = body;
     
     if (!carId || !options) {
       return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
@@ -96,6 +97,7 @@ export async function POST(request: Request) {
         userId: session.user.id,
         carId: carId,
         options: options,
+        totalPrice: totalPrice || 0, // 保存总价，如果未提供则默认为0
       },
       include: {
         car: {
@@ -107,10 +109,7 @@ export async function POST(request: Request) {
         },
       },
     });
-    
-    // 计算总价
-    let totalPrice = savedConfig.car.basePrice;
-    
+
     return NextResponse.json({
       id: savedConfig.id,
       carName: `${savedConfig.car.name} - 个性定制`,
@@ -165,4 +164,4 @@ export async function DELETE(request: Request) {
     console.error('删除配置失败:', error);
     return NextResponse.json({ error: '删除配置失败' }, { status: 500 });
   }
-} 
+}
