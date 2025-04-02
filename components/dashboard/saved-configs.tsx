@@ -1,8 +1,11 @@
+"use client"
 import Image from "next/image"
 import Link from "next/link"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Eye, ShoppingCart, Trash2 } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 
 interface SavedConfig {
   id: string
@@ -16,7 +19,43 @@ interface SavedConfigsProps {
   configs: SavedConfig[]
 }
 
-export default function SavedConfigs({ configs }: SavedConfigsProps) {
+export default function SavedConfigs({ configs: initialConfigs }: SavedConfigsProps) {
+  const [configs, setConfigs] = useState(initialConfigs)
+  const { toast } = useToast()
+
+  // 处理删除配置
+  const handleDeleteConfig = async (configId: string) => {
+    try {
+      const response = await fetch(`/api/configurations/delete?configId=${configId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // 更新UI，移除已删除的配置
+        setConfigs(configs.filter(config => config.id !== configId))
+        toast({
+          title: "删除成功",
+          description: "配置已成功删除",
+        })
+      } else {
+        // 显示错误消息
+        toast({
+          title: "删除失败",
+          description: data.error || "无法删除配置，请稍后再试",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("删除配置出错:", error)
+      toast({
+        title: "删除失败",
+        description: "发生错误，请稍后再试",
+        variant: "destructive",
+      })
+    }
+  }
   return (
     <Card>
       <CardHeader>
@@ -54,7 +93,12 @@ export default function SavedConfigs({ configs }: SavedConfigsProps) {
                       购买
                     </Button>
                   </Link>
-                  <Button variant="ghost" size="sm" className="px-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="px-2"
+                    onClick={() => handleDeleteConfig(config.id)}
+                  >
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
                 </div>

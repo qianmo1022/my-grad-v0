@@ -1,52 +1,45 @@
+"use client"
 import DashboardLayout from "@/components/dashboard/layout"
 import SavedConfigs from "@/components/dashboard/saved-configs"
+import { useEffect, useState } from "react"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function UserConfigurations() {
-  // 模拟数据
-  const savedConfigs = [
-    {
-      id: "CFG-001",
-      carName: "豪华轿车 - 个性定制",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      date: "2023-12-20",
-      price: "¥398,000",
-    },
-    {
-      id: "CFG-002",
-      carName: "城市SUV - 家庭版",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      date: "2024-01-05",
-      price: "¥312,000",
-    },
-    {
-      id: "CFG-003",
-      carName: "跑车系列 - 赛道版",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      date: "2024-01-18",
-      price: "¥688,000",
-    },
-    {
-      id: "CFG-004",
-      carName: "豪华轿车 - 商务版",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      date: "2024-02-02",
-      price: "¥372,000",
-    },
-    {
-      id: "CFG-005",
-      carName: "紧凑型轿车 - 经济版",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      date: "2024-02-15",
-      price: "¥192,000",
-    },
-    {
-      id: "CFG-006",
-      carName: "城市SUV - 越野版",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      date: "2024-02-28",
-      price: "¥328,000",
-    },
-  ]
+  const [savedConfigs, setSavedConfigs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+
+  // 从API获取用户保存的配置
+  useEffect(() => {
+    const fetchConfigurations = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/user/configurations')
+        
+        if (response.ok) {
+          const data = await response.json()
+          setSavedConfigs(data)
+        } else {
+          toast({
+            title: "获取配置失败",
+            description: "无法加载您保存的配置，请稍后再试",
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        console.error("获取配置出错:", error)
+        toast({
+          title: "获取配置失败",
+          description: "发生错误，请稍后再试",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchConfigurations()
+  }, [])
 
   return (
     <DashboardLayout userType="user">
@@ -56,7 +49,19 @@ export default function UserConfigurations() {
           <p className="text-muted-foreground">查看和管理您保存的所有汽车配置方案。</p>
         </div>
 
-        <SavedConfigs configs={savedConfigs} />
+        {loading ? (
+          <div className="flex justify-center items-center py-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          savedConfigs.length > 0 ? (
+            <SavedConfigs configs={savedConfigs} />
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-muted-foreground">您还没有保存任何配置</p>
+            </div>
+          )
+        )}
       </div>
     </DashboardLayout>
   )
