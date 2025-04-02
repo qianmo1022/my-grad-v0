@@ -56,6 +56,8 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
   const [paymentMethod, setPaymentMethod] = useState("credit-card")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [car, setCar] = useState<any>(null)
+  const [dealers, setDealers] = useState<any[]>([])
+  const [selectedDealerId, setSelectedDealerId] = useState<string>("")
 
   useEffect(() => {
     // 定义异步函数来加载数据
@@ -81,6 +83,25 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
     
     // 调用异步函数
     loadData()
+
+    // 获取经销商列表
+    const fetchDealers = async () => {
+      try {
+        const response = await fetch('/api/dealers')
+        if (response.ok) {
+          const dealerData = await response.json()
+          setDealers(dealerData)
+          // 如果有经销商，默认选择第一个
+          if (dealerData.length > 0) {
+            setSelectedDealerId(dealerData[0].id)
+          }
+        }
+      } catch (error) {
+        console.error('获取经销商列表失败:', error)
+      }
+    }
+
+    fetchDealers()
   }, [configId, toast])
 
   useEffect(() => {
@@ -110,7 +131,8 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
         body: JSON.stringify({
           configId,
           deliveryInfo,
-          paymentMethod
+          paymentMethod,
+          dealerId: selectedDealerId // 添加选择的经销商ID
         }),
       })
 
@@ -244,6 +266,26 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
                         </Label>
                       </div>
                     </RadioGroup>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="dealer">选择经销商</Label>
+                    <select 
+                      id="dealer" 
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={selectedDealerId}
+                      onChange={(e) => setSelectedDealerId(e.target.value)}
+                    >
+                      {dealers.length === 0 ? (
+                        <option value="">加载中...</option>
+                      ) : (
+                        dealers.map((dealer) => (
+                          <option key={dealer.id} value={dealer.id}>
+                            {dealer.businessName} ({dealer.location})
+                          </option>
+                        ))
+                      )}
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <Label>预计交付时间</Label>

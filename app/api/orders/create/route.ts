@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     
     // 获取请求体
     const body = await request.json();
-    const { configId, deliveryInfo, paymentMethod } = body;
+    const { configId, deliveryInfo, paymentMethod, dealerId } = body;
     
     if (!configId) {
       return NextResponse.json({ error: '缺少配置ID' }, { status: 400 });
@@ -43,11 +43,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '无权访问此配置' }, { status: 403 });
     }
     
-    // 获取默认经销商（在实际应用中，这应该从请求中获取或基于其他逻辑选择）
-    const defaultDealer = await prisma.dealer.findFirst();
+    // 使用前端传来的经销商ID，如果没有提供则获取默认经销商
+    let selectedDealerId = dealerId;
+    let dealer;
     
-    if (!defaultDealer) {
-      return NextResponse.json({ error: '无可用经销商' }, { status: 404 });
+    if (selectedDealerId) {
+      // 如果提供了经销商ID，查找该经销商
+      dealer = await prisma.dealer.findUnique({
+        where: { id: selectedDealerId }
+      });
+    }
+    
+    // 如果没有提供经销商ID或找不到指定经销商，则使用默认经销商
+    if (!dealer) {
+      dealer = await prisma.dealer.findFirst();
+      
+      if (!dealer) {
+        return NextResponse.json({ error: '无可用经销商' }, { status: 404 });
+      }
+      
+      selectedDealerId = dealer.id;
     }
     
     // 创建订单
@@ -55,7 +70,7 @@ export async function POST(request: Request) {
       data: {
         userId: session.user.id,
         carId: savedConfig.carId,
-        dealerId: defaultDealer.id,
+        dealerId: selectedDealerId, // 使用选择的经销商ID
         configuration: savedConfig.options as Record<string, string>,
         amount: savedConfig.totalPrice,
         status: 'pending', // 订单状态：待处理
