@@ -16,7 +16,7 @@ export async function GET(
       return NextResponse.json({ error: '未授权访问' }, { status: 401 });
     }
     
-    const configId = context.params.configId;
+    const { configId } = await context.params;
     
     if (!configId) {
       return NextResponse.json({ error: '缺少配置ID' }, { status: 400 });

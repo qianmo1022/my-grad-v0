@@ -1,51 +1,56 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useToast } from "@/components/ui/use-toast"
 import DashboardLayout from "@/components/dashboard/layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import RecentOrders from "@/components/dashboard/recent-orders"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function UserOrders() {
-  // 模拟数据
-  const allOrders = [
-    {
-      id: "ORD-001",
-      car: "豪华轿车 - 高配版",
-      date: "2023-11-15",
-      amount: "¥385,000",
-      status: "completed" as const,
-    },
-    {
-      id: "ORD-002",
-      car: "城市SUV - 标准版",
-      date: "2023-12-03",
-      amount: "¥292,000",
-      status: "processing" as const,
-    },
-    {
-      id: "ORD-003",
-      car: "跑车系列 - 性能版",
-      date: "2024-01-10",
-      amount: "¥665,000",
-      status: "pending" as const,
-    },
-    {
-      id: "ORD-004",
-      car: "豪华轿车 - 商务版",
-      date: "2024-01-22",
-      amount: "¥372,000",
-      status: "completed" as const,
-    },
-    {
-      id: "ORD-005",
-      car: "紧凑型轿车 - 经济版",
-      date: "2024-02-05",
-      amount: "¥192,000",
-      status: "cancelled" as const,
-    },
-  ]
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [allOrders, setAllOrders] = useState<any[]>([])
+  const [pendingOrders, setPendingOrders] = useState<any[]>([])
+  const [processingOrders, setProcessingOrders] = useState<any[]>([])
+  const [completedOrders, setCompletedOrders] = useState<any[]>([])
 
-  const pendingOrders = allOrders.filter((order) => order.status === "pending")
-  const processingOrders = allOrders.filter((order) => order.status === "processing")
-  const completedOrders = allOrders.filter((order) => order.status === "completed")
+  // 获取所有订单
+  useEffect(() => {
+    async function fetchAllOrders() {
+      try {
+        setIsLoading(true)
+        const response = await fetch('/api/user/orders')
+        if (response.ok) {
+          const data = await response.json()
+          setAllOrders(data)
+          // 根据状态过滤订单
+          setPendingOrders(data.filter((order: any) => order.status === "pending"))
+          setProcessingOrders(data.filter((order: any) => order.status === "processing"))
+          setCompletedOrders(data.filter((order: any) => order.status === "completed"))
+        } else {
+          console.error('获取订单数据失败')
+          toast({
+            title: "数据加载失败",
+            description: "无法加载订单数据，请稍后重试",
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        console.error('获取订单数据错误:', error)
+        toast({
+          title: "数据加载失败",
+          description: "获取订单数据时发生错误",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchAllOrders()
+  }, [toast])
 
   return (
     <DashboardLayout userType="user">
@@ -61,26 +66,73 @@ export default function UserOrders() {
             <CardDescription>按状态查看您的订单</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="all">
-              <TabsList>
-                <TabsTrigger value="all">全部订单</TabsTrigger>
-                <TabsTrigger value="pending">待处理</TabsTrigger>
-                <TabsTrigger value="processing">处理中</TabsTrigger>
-                <TabsTrigger value="completed">已完成</TabsTrigger>
-              </TabsList>
-              <TabsContent value="all" className="pt-4">
-                <RecentOrders orders={allOrders} userType="user" />
-              </TabsContent>
-              <TabsContent value="pending" className="pt-4">
-                <RecentOrders orders={pendingOrders} userType="user" />
-              </TabsContent>
-              <TabsContent value="processing" className="pt-4">
-                <RecentOrders orders={processingOrders} userType="user" />
-              </TabsContent>
-              <TabsContent value="completed" className="pt-4">
-                <RecentOrders orders={completedOrders} userType="user" />
-              </TabsContent>
-            </Tabs>
+            {isLoading ? (
+              <div className="space-y-6">
+                <div className="flex space-x-2">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-24" />
+                  ))}
+                </div>
+                <div className="space-y-4">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-4 w-48" />
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <Skeleton className="h-8 w-24" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <Tabs defaultValue="all">
+                <TabsList>
+                  <TabsTrigger value="all">全部订单</TabsTrigger>
+                  <TabsTrigger value="pending">待处理</TabsTrigger>
+                  <TabsTrigger value="processing">处理中</TabsTrigger>
+                  <TabsTrigger value="completed">已完成</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all" className="pt-4">
+                  {allOrders.length > 0 ? (
+                    <RecentOrders orders={allOrders} userType="user" />
+                  ) : (
+                    <div className="text-center py-10">
+                      <p className="text-muted-foreground">暂无订单记录</p>
+                    </div>
+                  )}
+                </TabsContent>
+                <TabsContent value="pending" className="pt-4">
+                  {pendingOrders.length > 0 ? (
+                    <RecentOrders orders={pendingOrders} userType="user" />
+                  ) : (
+                    <div className="text-center py-10">
+                      <p className="text-muted-foreground">暂无待处理订单</p>
+                    </div>
+                  )}
+                </TabsContent>
+                <TabsContent value="processing" className="pt-4">
+                  {processingOrders.length > 0 ? (
+                    <RecentOrders orders={processingOrders} userType="user" />
+                  ) : (
+                    <div className="text-center py-10">
+                      <p className="text-muted-foreground">暂无处理中订单</p>
+                    </div>
+                  )}
+                </TabsContent>
+                <TabsContent value="completed" className="pt-4">
+                  {completedOrders.length > 0 ? (
+                    <RecentOrders orders={completedOrders} userType="user" />
+                  ) : (
+                    <div className="text-center py-10">
+                      <p className="text-muted-foreground">暂无已完成订单</p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -17,70 +17,24 @@ import { ArrowLeft, CreditCard, Truck, Calendar, CheckCircle2 } from "lucide-rea
 import { useToast } from "@/components/ui/use-toast"
 import { getCarById } from "@/lib/car-data"
 
-// 模拟获取已保存配置的函数 (与前面相同)
-const getSavedConfig = (configId: string) => {
+// 从API获取已保存配置的函数
+const getSavedConfig = async (configId: string) => {
   if (!configId) {
     throw new Error("configId不能为空");
   }
   
-  // 这里应该从API获取已保存的配置
-  // 现在使用模拟数据
-  const mockSavedConfigs = [
-    {
-      id: "CFG-001",
-      carId: "luxury-sedan",
-      carName: "豪华轿车 - 个性定制",
-      date: "2023-12-20",
-      price: 398000,
-      options: {
-        "exterior-color": "black",
-        wheels: "luxury",
-        interior: "premium-leather",
-        "tech-package": "advanced-tech",
-      },
-    },
-    {
-      id: "CFG-002",
-      carId: "city-suv",
-      carName: "城市SUV - 家庭版",
-      date: "2024-01-05",
-      price: 312000,
-      options: {
-        "exterior-color": "silver",
-        wheels: "sport",
-        interior: "leather",
-        roof: "panoramic",
-      },
-    },
-    {
-      id: "CFG-003",
-      carId: "sports-car",
-      carName: "跑车系列 - 赛道版",
-      date: "2024-01-18",
-      price: 688000,
-      options: {
-        "exterior-color": "red",
-        wheels: "sport",
-        performance: "track-performance",
-        interior: "premium-sport",
-      },
-    },
-    {
-      id: "CFG-004",
-      carId: "luxury-sedan",
-      carName: "豪华轿车 - 商务版",
-      date: "2024-02-02",
-      price: 372000,
-      options: {
-        "exterior-color": "blue",
-        wheels: "standard",
-        interior: "leather",
-        "tech-package": "standard-tech",
-      },
-    },
-  ]
-
-  return mockSavedConfigs.find((config) => config.id === configId)
+  try {
+    const response = await fetch(`/api/configurations/${configId}`);
+    
+    if (!response.ok) {
+      throw new Error('获取配置失败');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('获取保存的配置失败:', error);
+    throw error;
+  }
 }
 
 // 定义更精确的类型
@@ -106,19 +60,28 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
   useEffect(() => {
     // 定义异步函数来加载数据
     const loadData = async () => {
-      // 获取已保存的配置
-      const config = getSavedConfig(configId)
-      if (!config) {
-        return notFound()
-      }
+      try {
+        // 获取已保存的配置
+        const config = await getSavedConfig(configId)
+        if (!config) {
+          return notFound()
+        }
 
-      setSavedConfig(config)
-      setIsLoading(false)
+        setSavedConfig(config)
+        setIsLoading(false)
+      } catch (error) {
+        console.error('加载配置数据失败:', error)
+        toast({
+          title: "加载失败",
+          description: "无法加载配置数据，请稍后再试",
+          variant: "destructive"
+        })
+      }
     }
     
     // 调用异步函数
     loadData()
-  }, [configId])
+  }, [configId, toast])
 
   useEffect(() => {
     if (savedConfig) {
@@ -131,21 +94,49 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
   }, [savedConfig])
 
   // 处理订单提交
-  const handleSubmitOrder = () => {
+  const handleSubmitOrder = async () => {
     setIsSubmitting(true)
 
-    // 模拟API请求
-    setTimeout(() => {
-      setIsSubmitting(false)
+    try {
+      // 收集表单数据
+      const deliveryInfo = savedConfig
 
-      toast({
-        title: "订单提交成功",
-        description: "您的订单已成功提交，我们将尽快处理",
+      // 发送API请求
+      const response = await fetch('/api/orders/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          configId,
+          deliveryInfo,
+          paymentMethod
+        }),
       })
 
-      // 跳转到订单确认页面
-      router.push("/dashboard/user/orders")
-    }, 1500)
+      const data = await response.json()
+
+      if (response.ok) {
+        toast({
+          title: "订单提交成功",
+          description: "您的订单已成功提交，我们将尽快处理",
+        })
+
+        // 跳转到订单确认页面
+        router.push("/dashboard/user/orders")
+      } else {
+        throw new Error(data.error || '提交订单失败')
+      }
+    } catch (error) {
+      console.error('提交订单失败:', error)
+      toast({
+        title: "提交失败",
+        description: error instanceof Error ? error.message : "提交订单时发生错误，请稍后再试",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (isLoading || !savedConfig) {
