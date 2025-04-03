@@ -74,7 +74,7 @@ export default function ReviewForm({ carId, configurationId }: ReviewFormProps) 
   }
 
   // 处理表单提交
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (rating === 0) {
@@ -108,7 +108,7 @@ export default function ReviewForm({ carId, configurationId }: ReviewFormProps) 
 
     try {
       // 添加评价
-      addReview({
+      await addReview({
         carId,
         rating,
         title,
@@ -127,10 +127,11 @@ export default function ReviewForm({ carId, configurationId }: ReviewFormProps) 
       // 重定向到评价列表页
       router.push(`/cars/${carId}/reviews`)
       router.refresh()
-    } catch (error) {
+    } catch (error: any) {
+      // 显示API返回的具体错误信息
       toast({
         title: "评价提交失败",
-        description: "提交评价时出现错误，请稍后重试",
+        description: error.message || "提交评价时出现错误，请稍后重试",
         variant: "destructive",
       })
     } finally {

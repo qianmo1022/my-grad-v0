@@ -164,17 +164,41 @@ export async function POST(request: Request) {
           rating,
           helpful: 0,
           verified: false,
-          tags: [],
-          images: [],
+          tags: body.tags || [],
+          images: body.images || [],
+          configurationId: body.configurationId,
         },
       });
       
+      // 获取用户信息
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+        },
+      });
+      
+      // 构造用户名
+      let userName = '用户';
+      if (user?.firstName || user?.lastName) {
+        userName = `${user.lastName || ''}${user.firstName || ''}`;
+      }
+      
       return NextResponse.json({
         id: newReview.id,
+        userId: session.user.id,
+        userName: userName,
+        userAvatar: "/placeholder.svg?height=40&width=40",
         title: newReview.title,
         content: newReview.content,
         rating: newReview.rating,
         date: newReview.createdAt,
+        verified: newReview.verified,
+        tags: newReview.tags,
+        images: newReview.images,
+        configurationId: newReview.configurationId,
       });
     } catch (error) {
       console.error('创建评论失败:', error);
@@ -184,4 +208,4 @@ export async function POST(request: Request) {
     console.error('创建评论失败:', error);
     return NextResponse.json({ error: '创建评论失败' }, { status: 500 });
   }
-} 
+}

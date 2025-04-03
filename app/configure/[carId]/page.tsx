@@ -12,7 +12,8 @@ interface ConfigurePageProps {
 }
 
 export default async function ConfigurePage({ params }: ConfigurePageProps) {
-  const car = await getCarById(params.carId)
+  const { carId } = await params;
+  const car = await getCarById(carId)
 
   if (!car) {
     notFound()
@@ -21,11 +22,11 @@ export default async function ConfigurePage({ params }: ConfigurePageProps) {
   return (
     <div className="min-h-screen bg-background">
       <Suspense fallback={<ConfigureSkeleton />}>
-        <Configurator carId={params.carId} />
+        <Configurator carId={carId} />
       </Suspense>
 
       <div className="container mx-auto py-8 px-4">
-        <ReviewList carId={params.carId} limit={3} showViewAll={true} />
+        <ReviewList carId={carId} limit={3} showViewAll={true} />
       </div>
     </div>
   )

@@ -12,7 +12,9 @@ interface NewReviewPageProps {
 }
 
 export default async function NewReviewPage({ params }: NewReviewPageProps) {
-  const car = await getCarById(params.carId)
+  // 修改这里，确保params是已解析的
+  const carId = params.carId
+  const car = await getCarById(carId)
 
   if (!car) {
     notFound()
@@ -21,7 +23,7 @@ export default async function NewReviewPage({ params }: NewReviewPageProps) {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
-        <Link href={`/cars/${params.carId}/reviews`}>
+        <Link href={`/cars/${carId}/reviews`}>
           <Button variant="ghost" className="pl-0">
             <ChevronLeft className="mr-2 h-4 w-4" />
             返回评价列表
@@ -32,7 +34,7 @@ export default async function NewReviewPage({ params }: NewReviewPageProps) {
       </div>
 
       <div className="max-w-3xl mx-auto">
-        <ReviewForm carId={params.carId} />
+        <ReviewForm carId={carId} />
       </div>
     </div>
   )

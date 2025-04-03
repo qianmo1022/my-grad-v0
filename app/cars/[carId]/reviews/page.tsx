@@ -12,7 +12,9 @@ interface ReviewsPageProps {
 }
 
 export default async function ReviewsPage({ params }: ReviewsPageProps) {
-  const car = await getCarById(params.carId)
+  // 修改这里，确保params是已解析的
+  const carId = params.carId
+  const car = await getCarById(carId)
 
   if (!car) {
     notFound()
@@ -22,7 +24,7 @@ export default async function ReviewsPage({ params }: ReviewsPageProps) {
     <div className="container mx-auto py-8 px-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <Link href={`/configure/${params.carId}`}>
+          <Link href={`/configure/${carId}`}>
             <Button variant="ghost" className="pl-0">
               <ChevronLeft className="mr-2 h-4 w-4" />
               返回车型
@@ -32,7 +34,7 @@ export default async function ReviewsPage({ params }: ReviewsPageProps) {
           <p className="text-muted-foreground">查看其他用户的真实体验和评价</p>
         </div>
 
-        <Link href={`/cars/${params.carId}/reviews/new`}>
+        <Link href={`/cars/${carId}/reviews/new`}>
           <Button>
             <PenLine className="mr-2 h-4 w-4" />
             写评价
@@ -40,7 +42,7 @@ export default async function ReviewsPage({ params }: ReviewsPageProps) {
         </Link>
       </div>
 
-      <ReviewList carId={params.carId} showViewAll={false} />
+      <ReviewList carId={carId} showViewAll={false} />
     </div>
   )
 }

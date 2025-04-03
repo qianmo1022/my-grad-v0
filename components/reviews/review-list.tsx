@@ -1,58 +1,113 @@
-"use client"
+"use client";
 
-import { cn } from "@/lib/utils"
-
-import { useState } from "react"
-import Link from "next/link"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChevronRight } from "lucide-react"
-import ReviewCard from "./review-card"
-import { getCarReviews, getCarAverageRating, getRatingDistribution } from "@/lib/reviews"
+import { cn } from "@/lib/utils";
+import { Review } from "@/lib/reviews";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChevronRight } from "lucide-react";
+import ReviewCard from "./review-card";
+import {
+  getCarReviews,
+  getCarAverageRating,
+  getRatingDistribution,
+} from "@/lib/reviews";
+import { PenLine } from "lucide-react"
 
 interface ReviewListProps {
-  carId: string
-  limit?: number
-  showViewAll?: boolean
+  carId: string;
+  limit?: number;
+  showViewAll?: boolean;
 }
 
-export default function ReviewList({ carId, limit, showViewAll = true }: ReviewListProps) {
-  const [sortBy, setSortBy] = useState<string>("recent")
-  const [filterRating, setFilterRating] = useState<string>("all")
+export default function ReviewList({
+  carId,
+  limit,
+  showViewAll = true,
+}: ReviewListProps) {
+  const [sortBy, setSortBy] = useState<string>("recent");
+  const [filterRating, setFilterRating] = useState<string>("all");
+  const [allReviews, setAllReviews] = useState<Review[]>([]);
+  const [averageRating, setAverageRating] = useState<{
+    average: number;
+    count: number;
+  }>({ average: 0, count: 0 });
+  const [ratingDistribution, setRatingDistribution] = useState<number[]>([
+    0, 0, 0, 0, 0,
+  ]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // 获取评价数据
-  const allReviews = getCarReviews(carId)
-  const { average, count } = getCarAverageRating(carId)
-  const ratingDistribution = getRatingDistribution(carId)
+  // 使用useEffect获取评价数据
+  useEffect(() => {
+    async function fetchReviewData() {
+      try {
+        setLoading(true);
+        const reviews = await getCarReviews(carId);
+        const avgRating = await getCarAverageRating(carId);
+        const distribution = await getRatingDistribution(carId);
+
+        setAllReviews(reviews);
+        setAverageRating(avgRating);
+        setRatingDistribution(distribution);
+      } catch (error) {
+        console.error("获取评价数据失败:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchReviewData();
+  }, [carId]);
 
   // 根据筛选条件过滤评价
-  let filteredReviews = [...allReviews]
+  let filteredReviews = [...allReviews];
 
-  if (filterRating !== "all") {
-    const rating = Number.parseInt(filterRating)
-    filteredReviews = filteredReviews.filter((review) => review.rating === rating)
+  if (filterRating !== "all" && !isNaN(Number.parseInt(filterRating))) {
+    const rating = Number.parseInt(filterRating);
+    filteredReviews = filteredReviews.filter(
+      (review) => review.rating === rating
+    );
   }
 
   // 根据排序条件排序评价
   if (sortBy === "recent") {
-    filteredReviews.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    filteredReviews.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
   } else if (sortBy === "helpful") {
-    filteredReviews.sort((a, b) => b.helpful - a.helpful)
+    filteredReviews.sort((a, b) => b.helpful - a.helpful);
   } else if (sortBy === "highest") {
-    filteredReviews.sort((a, b) => b.rating - a.rating)
+    filteredReviews.sort((a, b) => b.rating - a.rating);
   } else if (sortBy === "lowest") {
-    filteredReviews.sort((a, b) => a.rating - b.rating)
+    filteredReviews.sort((a, b) => a.rating - b.rating);
   }
 
   // 限制显示数量
-  const displayReviews = limit ? filteredReviews.slice(0, limit) : filteredReviews
+  const displayReviews = limit
+    ? filteredReviews.slice(0, limit)
+    : filteredReviews;
 
   // 计算各星级评价的百分比
   const calculatePercentage = (count: number) => {
-    return allReviews.length > 0 ? Math.round((count / allReviews.length) * 100) : 0
-  }
+    return allReviews.length > 0
+      ? Math.round((count / allReviews.length) * 100)
+      : 0;
+  };
 
   return (
     <Card>
@@ -60,11 +115,21 @@ export default function ReviewList({ carId, limit, showViewAll = true }: ReviewL
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <CardTitle>用户评价</CardTitle>
-            <CardDescription>{count > 0 ? `${count}条评价，平均${average}星` : "暂无评价"}</CardDescription>
+            <CardDescription>
+              {averageRating.count > 0
+                ? `${averageRating.count}条评价，平均${averageRating.average}星`
+                : "暂无评价"}
+            </CardDescription>
           </div>
 
-          {count > 0 && (
+          {averageRating.count > 0 && (
             <div className="flex flex-col sm:flex-row gap-2">
+              <Link href={`/cars/${carId}/reviews/new`}>
+                <Button>
+                  <PenLine className="mr-2 h-4 w-4" />
+                  写评价
+                </Button>
+              </Link>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="排序方式" />
@@ -96,20 +161,28 @@ export default function ReviewList({ carId, limit, showViewAll = true }: ReviewL
       </CardHeader>
 
       <CardContent>
-        {count > 0 ? (
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">加载中...</p>
+          </div>
+        ) : averageRating.count > 0 ? (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1">
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="text-4xl font-bold">{average}</div>
+                    <div className="text-4xl font-bold">
+                      {averageRating.average}
+                    </div>
                     <div className="flex">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <svg
                           key={i}
                           className={cn(
                             "h-5 w-5",
-                            i < Math.round(average) ? "text-yellow-400 fill-yellow-400" : "text-gray-300 fill-gray-300",
+                            i < Math.round(averageRating.average)
+                              ? "text-yellow-400 fill-yellow-400"
+                              : "text-gray-300 fill-gray-300"
                           )}
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
@@ -122,18 +195,26 @@ export default function ReviewList({ carId, limit, showViewAll = true }: ReviewL
 
                   <div className="space-y-2">
                     {ratingDistribution.map((count, index) => {
-                      const starRating = index + 1
-                      const percentage = calculatePercentage(count)
+                      const starRating = index + 1;
+                      const percentage = calculatePercentage(count);
 
                       return (
-                        <div key={starRating} className="flex items-center gap-2">
+                        <div
+                          key={starRating}
+                          className="flex items-center gap-2"
+                        >
                           <div className="w-8 text-sm">{starRating}星</div>
                           <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-yellow-400" style={{ width: `${percentage}%` }} />
+                            <div
+                              className="h-full bg-yellow-400"
+                              style={{ width: `${percentage}%` }}
+                            />
                           </div>
-                          <div className="w-8 text-sm text-right">{percentage}%</div>
+                          <div className="w-8 text-sm text-right">
+                            {percentage}%
+                          </div>
                         </div>
-                      )
+                      );
                     })}
                   </div>
                 </div>
@@ -163,7 +244,9 @@ export default function ReviewList({ carId, limit, showViewAll = true }: ReviewL
 
                   <TabsContent value="with-images" className="mt-4 space-y-4">
                     {displayReviews
-                      .filter((review) => review.images && review.images.length > 0)
+                      .filter(
+                        (review) => review.images && review.images.length > 0
+                      )
                       .map((review) => (
                         <ReviewCard key={review.id} review={review} />
                       ))}
@@ -185,7 +268,9 @@ export default function ReviewList({ carId, limit, showViewAll = true }: ReviewL
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">暂无评价，成为第一个评价此车型的用户！</p>
+            <p className="text-muted-foreground mb-4">
+              暂无评价，成为第一个评价此车型的用户！
+            </p>
             <Link href={`/cars/${carId}/reviews/new`}>
               <Button>写评价</Button>
             </Link>
@@ -193,6 +278,5 @@ export default function ReviewList({ carId, limit, showViewAll = true }: ReviewL
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
-

@@ -35,6 +35,7 @@ export async function GET(
   { params }: { params: { carId: string } }
 ) {
   try {
+    // 修改这里，确保params是已解析的
     const carId = params.carId;
     
     // 获取查询参数
@@ -162,4 +163,4 @@ export async function GET(
     console.error('获取车型评价失败:', error);
     return NextResponse.json({ error: '获取车型评价失败' }, { status: 500 });
   }
-} 
+}

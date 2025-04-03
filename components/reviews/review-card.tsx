@@ -2,22 +2,37 @@
 
 import { useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ThumbsUp, Check, Calendar, ImageIcon } from "lucide-react"
+import { ThumbsUp, Check, Calendar, ImageIcon, PenLine, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { type Review, markReviewAsHelpful } from "@/lib/reviews"
+import { type Review, markReviewAsHelpful, deleteReview } from "@/lib/reviews"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { useToast } from "@/components/ui/use-toast"
 
 interface ReviewCardProps {
   review: Review
   detailed?: boolean
+  onReviewDeleted?: (reviewId: string) => void
 }
 
-export default function ReviewCard({ review, detailed = false }: ReviewCardProps) {
+export default function ReviewCard({ review, detailed = false, onReviewDeleted }: ReviewCardProps) {
+  const { toast } = useToast()
   const [helpfulCount, setHelpfulCount] = useState(review.helpful)
   const [hasMarkedHelpful, setHasMarkedHelpful] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [reviewToDelete, setReviewToDelete] = useState<string | null>(null)
 
   // 格式化日期
   const formattedDate = review.date
@@ -30,6 +45,47 @@ export default function ReviewCard({ review, detailed = false }: ReviewCardProps
       setHasMarkedHelpful(true)
     }
   }
+  
+  // 处理删除评价
+  const handleDeleteReview = async () => {
+    if (!reviewToDelete) return
+
+    setIsDeleting(true)
+
+    try {
+      const response = await fetch("/api/user/reviews", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ reviewId: reviewToDelete }),
+      })
+
+      if (!response.ok) {
+        throw new Error("删除评价失败")
+      }
+
+      // 通知父组件评价已被删除
+      if (onReviewDeleted) {
+        onReviewDeleted(reviewToDelete)
+      }
+
+      toast({
+        title: "评价已删除",
+        description: "您的评价已成功删除",
+      })
+    } catch (error) {
+      console.error("删除评价失败:", error)
+      toast({
+        title: "删除失败",
+        description: "删除评价时出现错误，请稍后重试",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
+      setReviewToDelete(null)
+    }
+  }
 
   return (
     <Card className="overflow-hidden">
@@ -37,7 +93,7 @@ export default function ReviewCard({ review, detailed = false }: ReviewCardProps
         <div className="flex items-start gap-4">
           <Avatar className="h-10 w-10">
             <AvatarImage src={review.userAvatar || ""} alt={review.userName} />
-            <AvatarFallback>{review.userName[0]}</AvatarFallback>
+            <AvatarFallback>{review.userName}</AvatarFallback>
           </Avatar>
 
           <div className="flex-1">
@@ -109,23 +165,61 @@ export default function ReviewCard({ review, detailed = false }: ReviewCardProps
       </CardContent>
 
       <CardFooter className="bg-muted/20 px-4 py-2 flex justify-between">
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(hasMarkedHelpful && "text-primary")}
-          onClick={handleMarkHelpful}
-          disabled={hasMarkedHelpful}
-        >
-          <ThumbsUp className="h-4 w-4 mr-1" />
-          有帮助 ({helpfulCount})
-        </Button>
-
-        {review.images && review.images.length > 0 && !detailed && (
-          <Button variant="ghost" size="sm">
-            <ImageIcon className="h-4 w-4 mr-1" />
-            查看图片 ({review.images.length})
+        <div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(hasMarkedHelpful && "text-primary")}
+            onClick={handleMarkHelpful}
+            disabled={hasMarkedHelpful}
+          >
+            <ThumbsUp className="h-4 w-4 mr-1" />
+            有帮助 ({helpfulCount})
           </Button>
-        )}
+
+          {review.images && review.images.length > 0 && !detailed && (
+            <Button variant="ghost" size="sm">
+              <ImageIcon className="h-4 w-4 mr-1" />
+              查看图片 ({review.images.length})
+            </Button>
+          )}
+        </div>
+        
+        <div className="flex gap-2">
+          <Link href={`/cars/${review.carId}/reviews/edit/${review.id}`}>
+            <Button size="sm" variant="outline">
+              <PenLine className="h-4 w-4 mr-1" />
+              编辑
+            </Button>
+          </Link>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-red-500 hover:text-red-600"
+                onClick={() => setReviewToDelete(review.id)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                删除
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>确认删除评价</DialogTitle>
+                <DialogDescription>您确定要删除这条评价吗？此操作无法撤销。</DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setReviewToDelete(null)}>
+                  取消
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteReview} disabled={isDeleting}>
+                  {isDeleting ? "删除中..." : "确认删除"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardFooter>
     </Card>
   )

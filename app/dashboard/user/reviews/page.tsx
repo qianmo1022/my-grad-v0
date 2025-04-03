@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import DashboardLayout from "@/components/dashboard/layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,38 +18,93 @@ import {
 import { useToast } from "@/components/ui/use-toast"
 import { PenLine, Trash2 } from "lucide-react"
 import ReviewCard from "@/components/reviews/review-card"
-import { getUserReviews, deleteReview } from "@/lib/reviews"
+
+// 定义评价类型
+interface Review {
+  id: string
+  carId: string
+  userId: string
+  userName: string
+  userAvatar?: string
+  rating: number
+  title: string
+  content: string
+  date?: string
+  createdAt: string
+  helpful: number
+  configurationId?: string
+  images?: string[]
+  tags: string[]
+  verified: boolean
+  car?: {
+    id: string
+    name: string
+    thumbnail: string
+  }
+}
 
 export default function UserReviews() {
   const { toast } = useToast()
   const [reviewToDelete, setReviewToDelete] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [userReviews, setUserReviews] = useState(getUserReviews("user-001"))
+  const [isLoading, setIsLoading] = useState(true)
+  const [userReviews, setUserReviews] = useState<Review[]>([])
+
+  // 获取用户评价
+  useEffect(() => {
+    const fetchUserReviews = async () => {
+      try {
+        setIsLoading(true)
+        const response = await fetch("/api/user/reviews")
+        
+        if (!response.ok) {
+          throw new Error("获取评价失败")
+        }
+        
+        const data = await response.json()
+        setUserReviews(data.reviews)
+      } catch (error) {
+        console.error("获取评价失败:", error)
+        toast({
+          title: "获取评价失败",
+          description: "加载评价时出现错误，请稍后重试",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchUserReviews()
+  }, [])
 
   // 处理删除评价
-  const handleDeleteReview = () => {
+  const handleDeleteReview = async () => {
     if (!reviewToDelete) return
 
     setIsDeleting(true)
 
     try {
-      const success = deleteReview(reviewToDelete)
+      const response = await fetch("/api/user/reviews", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ reviewId: reviewToDelete }),
+      })
 
-      if (success) {
-        setUserReviews(userReviews.filter((review) => review.id !== reviewToDelete))
-
-        toast({
-          title: "评价已删除",
-          description: "您的评价已成功删除",
-        })
-      } else {
-        toast({
-          title: "删除失败",
-          description: "删除评价时出现错误，请稍后重试",
-          variant: "destructive",
-        })
+      if (!response.ok) {
+        throw new Error("删除评价失败")
       }
+
+      setUserReviews(userReviews.filter((review) => review.id !== reviewToDelete))
+
+      toast({
+        title: "评价已删除",
+        description: "您的评价已成功删除",
+      })
     } catch (error) {
+      console.error("删除评价失败:", error)
       toast({
         title: "删除失败",
         description: "删除评价时出现错误，请稍后重试",
@@ -75,123 +130,70 @@ export default function UserReviews() {
             <CardDescription>您已发布的车型评价</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="all">
-              <TabsList>
-                <TabsTrigger value="all">全部评价</TabsTrigger>
-                <TabsTrigger value="recent">最近发布</TabsTrigger>
-              </TabsList>
+            {isLoading ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">加载中...</p>
+              </div>
+            ) : (
+              <Tabs defaultValue="all">
+                <TabsList>
+                  <TabsTrigger value="all">全部评价</TabsTrigger>
+                  <TabsTrigger value="recent">最近发布</TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="all" className="mt-4">
-                {userReviews.length > 0 ? (
-                  <div className="space-y-4">
-                    {userReviews.map((review) => (
-                      <div key={review.id} className="relative">
-                        <ReviewCard review={review} detailed />
-                        <div className="absolute top-4 right-4 flex gap-2">
-                          <Link href={`/cars/${review.carId}/reviews/edit/${review.id}`}>
-                            <Button size="sm" variant="outline">
-                              <PenLine className="h-4 w-4 mr-1" />
-                              编辑
-                            </Button>
-                          </Link>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-red-500 hover:text-red-600"
-                                onClick={() => setReviewToDelete(review.id)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                删除
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>确认删除评价</DialogTitle>
-                                <DialogDescription>您确定要删除这条评价吗？此操作无法撤销。</DialogDescription>
-                              </DialogHeader>
-                              <DialogFooter>
-                                <Button variant="outline" onClick={() => setReviewToDelete(null)}>
-                                  取消
-                                </Button>
-                                <Button variant="destructive" onClick={handleDeleteReview} disabled={isDeleting}>
-                                  {isDeleting ? "删除中..." : "确认删除"}
-                                </Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground mb-4">您还没有发布任何评价</p>
-                    <Link href="/cars">
-                      <Button>浏览车型并评价</Button>
-                    </Link>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="recent" className="mt-4">
-                {userReviews.length > 0 ? (
-                  <div className="space-y-4">
-                    {userReviews
-                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                      .slice(0, 5)
-                      .map((review) => (
-                        <div key={review.id} className="relative">
-                          <ReviewCard review={review} detailed />
-                          <div className="absolute top-4 right-4 flex gap-2">
-                            <Link href={`/cars/${review.carId}/reviews/edit/${review.id}`}>
-                              <Button size="sm" variant="outline">
-                                <PenLine className="h-4 w-4 mr-1" />
-                                编辑
-                              </Button>
-                            </Link>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-red-500 hover:text-red-600"
-                                  onClick={() => setReviewToDelete(review.id)}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-1" />
-                                  删除
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>确认删除评价</DialogTitle>
-                                  <DialogDescription>您确定要删除这条评价吗？此操作无法撤销。</DialogDescription>
-                                </DialogHeader>
-                                <DialogFooter>
-                                  <Button variant="outline" onClick={() => setReviewToDelete(null)}>
-                                    取消
-                                  </Button>
-                                  <Button variant="destructive" onClick={handleDeleteReview} disabled={isDeleting}>
-                                    {isDeleting ? "删除中..." : "确认删除"}
-                                  </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
-                          </div>
+                <TabsContent value="all" className="mt-4">
+                  {userReviews.length > 0 ? (
+                    <div className="space-y-4">
+                      {userReviews.map((review) => (
+                        <div key={review.id}>
+                          <ReviewCard 
+                            review={{...review, date: review.date || review.createdAt}} 
+                            detailed 
+                            onReviewDeleted={(reviewId) => {
+                              setUserReviews(userReviews.filter((r) => r.id !== reviewId))
+                            }}
+                          />
                         </div>
                       ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground mb-4">您还没有发布任何评价</p>
-                    <Link href="/cars">
-                      <Button>浏览车型并评价</Button>
-                    </Link>
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground mb-4">您还没有发布任何评价</p>
+                      <Link href="/cars">
+                        <Button>浏览车型并评价</Button>
+                      </Link>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="recent" className="mt-4">
+                  {userReviews.length > 0 ? (
+                    <div className="space-y-4">
+                      {userReviews
+                        .slice(0, 5)
+                        .map((review) => (
+                          <div key={review.id}>
+                            <ReviewCard 
+                              review={{...review, date: review.date || review.createdAt}} 
+                              detailed 
+                              onReviewDeleted={(reviewId) => {
+                                setUserReviews(userReviews.filter((r) => r.id !== reviewId))
+                              }}
+                            />
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground mb-4">您还没有发布任何评价</p>
+                      <Link href="/cars">
+                        <Button>浏览车型并评价</Button>
+                      </Link>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            )}
           </CardContent>
         </Card>
       </div>
