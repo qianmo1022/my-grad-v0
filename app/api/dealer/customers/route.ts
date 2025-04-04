@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 
-import prisma from '@/lib/db'
+import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth'
 
 // 自定义客户响应类型
@@ -176,4 +176,4 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
-} 
+}

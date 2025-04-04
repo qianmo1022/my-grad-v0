@@ -40,6 +40,9 @@ export async function PUT(request: Request, { params }: { params: { orderId: str
         user: {
           select: {
             id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
           },
         },
       },
@@ -61,6 +64,66 @@ export async function PUT(request: Request, { params }: { params: { orderId: str
     
     if (status === 'completed' && order.status !== 'processing') {
       return NextResponse.json({ error: '只能完成处理中的订单' }, { status: 400 });
+    }
+    
+    // 如果订单状态更新为processing，将客户信息写入Customer表
+    if (status === 'processing' && order.user) {
+      // 检查该用户是否已存在于Customer表中
+      const existingCustomer = await prisma.customer.findFirst({
+        where: {
+          email: order.user.email as string,
+          dealerId: dealerId
+        }
+      });
+      
+      // 如果客户不存在，则创建新客户记录
+      if (!existingCustomer) {
+        // 构建客户名称
+        const customerName = order.user.firstName && order.user.lastName
+          ? `${order.user.firstName} ${order.user.lastName}`
+          : order.user.email?.split('@')[0] || '未知客户';
+        
+        // 创建新客户
+        const newCustomer = await prisma.customer.create({
+          data: {
+            name: customerName,
+            email: order.user.email as string,
+            status: 'active',
+            totalSpent: order.amount,
+            lastOrderDate: new Date(),
+            dealerId: dealerId
+          }
+        });
+        
+        // 更新订单，关联到新创建的客户
+        await prisma.order.update({
+          where: { id: orderId },
+          data: {
+            customer: {
+              connect: { id: newCustomer.id }
+            }
+          }
+        });
+      } else {
+        // 如果客户已存在，更新客户信息
+        await prisma.customer.update({
+          where: { id: existingCustomer.id },
+          data: {
+            totalSpent: { increment: order.amount },
+            lastOrderDate: new Date()
+          }
+        });
+        
+        // 更新订单，关联到已存在的客户
+        await prisma.order.update({
+          where: { id: orderId },
+          data: {
+            customer: {
+              connect: { id: existingCustomer.id }
+            }
+          }
+        });
+      }
     }
     
     // 更新订单状态
