@@ -15,6 +15,12 @@ export default function DealerCars() {
   const [activeCars, setActiveCars] = useState<any[]>([])
   const [draftCars, setDraftCars] = useState<any[]>([])
   const [archivedCars, setArchivedCars] = useState<any[]>([])
+  const [refreshKey, setRefreshKey] = useState<number>(0)
+
+  // 刷新数据的函数
+  const refreshData = () => {
+    setRefreshKey(prev => prev + 1)
+  }
 
   // 获取所有车型数据
   useEffect(() => {
@@ -51,7 +57,7 @@ export default function DealerCars() {
     }
 
     fetchAllCars()
-  }, [toast])
+  }, [toast, refreshKey]) // 添加refreshKey作为依赖项，当它变化时重新获取数据
 
   // 获取特定状态的车型
   async function fetchCarsByStatus(status: string) {
@@ -123,28 +129,28 @@ export default function DealerCars() {
                 </TabsList>
                 <TabsContent value="all" className="pt-4">
                   {allCars.length > 0 ? (
-                    <CarManagement cars={allCars} />
+                    <CarManagement cars={allCars} onDataChange={refreshData} />
                   ) : (
                     <p className="text-center py-4 text-muted-foreground">暂无车型数据</p>
                   )}
                 </TabsContent>
                 <TabsContent value="active" className="pt-4">
                   {activeCars.length > 0 ? (
-                    <CarManagement cars={activeCars} />
+                    <CarManagement cars={activeCars} onDataChange={refreshData} />
                   ) : (
                     <p className="text-center py-4 text-muted-foreground">暂无已上线车型</p>
                   )}
                 </TabsContent>
                 <TabsContent value="draft" className="pt-4">
                   {draftCars.length > 0 ? (
-                    <CarManagement cars={draftCars} />
+                    <CarManagement cars={draftCars} onDataChange={refreshData} />
                   ) : (
                     <p className="text-center py-4 text-muted-foreground">暂无草稿车型</p>
                   )}
                 </TabsContent>
                 <TabsContent value="archived" className="pt-4">
                   {archivedCars.length > 0 ? (
-                    <CarManagement cars={archivedCars} />
+                    <CarManagement cars={archivedCars} onDataChange={refreshData} />
                   ) : (
                     <p className="text-center py-4 text-muted-foreground">暂无已归档车型</p>
                   )}

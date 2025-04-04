@@ -25,9 +25,15 @@ export async function GET(request: Request) {
       orderBy: { name: 'asc' },
     });
     
-    // 统计每个车型的销售数量并根据订单状态确定车型状态
+    // 根据请求的状态过滤车型
+    let filteredCars = cars;
+    if (requestedStatus) {
+      filteredCars = cars.filter(car => car.status === requestedStatus);
+    }
+    
+    // 统计每个车型的销售数量
     const carSales = await Promise.all(
-      cars.map(async (car) => {
+      filteredCars.map(async (car) => {
         // 计算销售数量
         const sales = await prisma.order.count({
           where: {
@@ -36,40 +42,60 @@ export async function GET(request: Request) {
           }
         });
         
-        // 模拟车辆状态 - 实际应用中可能需要添加状态字段到Car模型
-        // 这里简单地基于是否有订单来确定状态
-        let status: CarStatus = 'active';
-        
-        if (sales === 0) {
-          // 如果没有销售，假设是草稿状态
-          status = 'draft';
-        } else if (sales > 0 && Math.random() > 0.8) {
-          // 随机将一些有销售的车辆设为归档状态（这只是示例逻辑）
-          status = 'archived';
-        }
-        
-        // 如果请求了特定状态的车型，且当前车型不符合，则跳过
-        if (requestedStatus && status !== requestedStatus) {
-          return null;
-        }
+        // 使用数据库中的状态字段
         
         return {
           id: car.id,
           name: car.name,
           thumbnail: car.thumbnail || "/placeholder.svg?height=100&width=160",
           basePrice: `¥${car.basePrice.toLocaleString()}`,
-          status: status,
+          status: car.status,
           sales
         };
       })
     );
     
-    // 过滤掉null值
-    const filteredCars = carSales.filter(car => car !== null);
-    
-    return NextResponse.json(filteredCars);
+    // 直接返回结果，不需要过滤null值
+    return NextResponse.json(carSales);
   } catch (error: any) {
     console.error('获取车型数据失败:', { message: error?.message || '未知错误' });
     return NextResponse.json({ error: '获取车型数据失败' }, { status: 500 });
   }
-} 
+}
+
+// 添加新车型
+export async function POST(request: Request) {
+  try {
+    // 获取当前会话信息
+    const session = await getServerSession(authOptions);
+    
+    if (!session || !session.user || session.user.type !== 'dealer') {
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 });
+    }
+    
+    const body = await request.json();
+    
+    // 验证必要字段
+    if (!body.name || body.basePrice === undefined) {
+      return NextResponse.json({ error: '缺少必要字段' }, { status: 400 });
+    }
+    
+    // 创建新车型
+    const newCar = await prisma.car.create({
+      data: {
+        id: body.id || '', // 如果前端未提供则使用空字符串
+        name: body.name,
+        basePrice: body.basePrice,
+        thumbnail: body.thumbnail || "/placeholder.svg",
+        description: body.description || '', // 如果前端未提供则使用空字符串
+        defaultColor: body.defaultColor || '', // 如果前端未提供则使用空字符串
+        status: body.status || 'draft', // 设置车型状态，默认为草稿状态
+      },
+    });
+    
+    return NextResponse.json(newCar, { status: 201 });
+  } catch (error: any) {
+    console.error('创建车型失败:', { message: error?.message || '未知错误' });
+    return NextResponse.json({ error: '创建车型失败' }, { status: 500 });
+  }
+}

@@ -93,6 +93,7 @@ model Car {
   description        String
   thumbnail          String
   defaultColor       String
+  status             String               @default("active") // active, draft, archived
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   browsingHistory    BrowsingHistory[]
