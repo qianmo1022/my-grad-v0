@@ -41,7 +41,7 @@ export async function PUT(request: Request, { params }: { params: { carId: strin
       return NextResponse.json({ error: '未授权访问' }, { status: 401 });
     }
     
-    const { carId } = params;
+    const { carId } = await params;
     const body = await request.json();
     
     // 验证车型是否存在

@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import CarDialog, { Car } from "./car-dialog"
-
+import Link from "next/link"
 interface CarManagementProps {
   cars: Car[]
   isLoading?: boolean
@@ -102,10 +102,12 @@ export default function CarManagement({ cars = [], isLoading = false, onDataChan
           <CardTitle>车型管理</CardTitle>
           <CardDescription>管理您的车型和配置选项</CardDescription>
         </div>
-        <Button onClick={handleAddCar}>
-          <Plus className="h-4 w-4 mr-2" />
-          添加车型
-        </Button>
+        <Link href="/dashboard/dealer/cars/new">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            添加车型
+          </Button>
+        </Link>
       </CardHeader>
       <CardContent>
         <Table>

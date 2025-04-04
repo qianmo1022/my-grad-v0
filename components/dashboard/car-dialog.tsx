@@ -84,17 +84,9 @@ export default function CarDialog({
     if (car && open) {
       form.reset({
         name: car.name,
-        basePrice: car.basePrice.replace(/[^0-9]/g, ""), // 移除非数字字符
+        basePrice: car.basePrice.toString(),
         thumbnail: car.thumbnail,
         status: car.status,
-      });
-    } else if (!car && open) {
-      // 添加新车型时重置表单
-      form.reset({
-        name: "",
-        basePrice: "",
-        thumbnail: "/placeholder.svg",
-        status: "draft",
       });
     }
   }, [car, open, form]);
@@ -110,9 +102,12 @@ export default function CarDialog({
         basePrice: Number(values.basePrice),
       };
 
-      // 根据是编辑还是新增选择不同的API端点和方法
-      const url = isEditing ? `/api/dealer/cars/${car?.id}` : '/api/dealer/cars';
-      const method = isEditing ? 'PUT' : 'POST';
+      // 记录要提交的数据，便于调试
+      console.log('提交的车型数据:', carData);
+
+      // 更新车型API调用
+      const url = `/api/dealer/cars/${car?.id}`;
+      const method = 'PUT';
 
       const response = await fetch(url, {
         method,
@@ -122,14 +117,19 @@ export default function CarDialog({
         body: JSON.stringify(carData),
       });
 
+      const responseData = await response.json().catch(() => ({}));
+      
       if (!response.ok) {
+        console.error('API响应错误:', response.status, responseData);
         throw new Error('操作失败');
       }
 
+      console.log('API响应数据:', responseData);
+
       // 成功提示
       toast({
-        title: isEditing ? "车型已更新" : "车型已添加",
-        description: isEditing ? "车型信息已成功更新" : "新车型已成功添加到系统",
+        title: "车型已更新",
+        description: "车型信息已成功更新",
       });
 
       // 关闭对话框并刷新数据
@@ -139,7 +139,7 @@ export default function CarDialog({
       console.error('车型操作失败:', error);
       toast({
         title: "操作失败",
-        description: `${isEditing ? '更新' : '添加'}车型时发生错误，请重试`,
+        description: "更新车型时发生错误，请重试",
         variant: "destructive",
       });
     } finally {
@@ -151,9 +151,9 @@ export default function CarDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "编辑车型" : "添加新车型"}</DialogTitle>
+          <DialogTitle>编辑车型</DialogTitle>
           <DialogDescription>
-            {isEditing ? "更新车型信息和状态" : "添加新车型到您的产品目录"}
+            更新车型信息和状态
           </DialogDescription>
         </DialogHeader>
 
@@ -220,7 +220,7 @@ export default function CarDialog({
                   <FormLabel>状态</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -250,7 +250,7 @@ export default function CarDialog({
                 取消
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "保存中..." : isEditing ? "更新车型" : "添加车型"}
+                {isSubmitting ? "保存中..." : "更新车型"}
               </Button>
             </DialogFooter>
           </form>
