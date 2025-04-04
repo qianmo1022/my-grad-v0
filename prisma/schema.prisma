@@ -25,6 +25,7 @@ model User {
   orders             Order[]
   reviews            Review[]            // 用户评价
   notifications      Notification[]      // 用户通知
+  helpfulMarks       ReviewHelpful[]     // 标记为有帮助的评价
 }
 
 // 商家模型
@@ -239,9 +240,24 @@ model Review {
   userId         String
   car            Car      @relation(fields: [carId], references: [id])
   carId          String
+  helpfulMarks   ReviewHelpful[] // 添加反向关系
 
   @@index([userId])
   @@index([carId])
+}
+
+// 评价有帮助标记模型
+model ReviewHelpful {
+  id        String   @id @default(uuid())
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reviewId  String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([reviewId, userId]) // 确保每个用户只能为一个评价标记一次"有帮助"
+  @@index([reviewId])
+  @@index([userId])
 }
 
 // 通知类型枚举

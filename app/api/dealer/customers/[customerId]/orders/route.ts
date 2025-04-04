@@ -20,7 +20,7 @@ export async function GET(
     }
     
     const dealerId = session.user.id
-    const { customerId } = params
+    const { customerId } = await params
     
     // 查询参数
     const url = new URL(request.url)

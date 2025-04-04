@@ -2,14 +2,15 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import DashboardLayout from "@/components/dashboard/layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Bell, ShoppingCart, MessageSquare, AlertCircle, Info } from "lucide-react"
+import { Bell, ShoppingCart, MessageSquare, AlertCircle, Info, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/components/ui/use-toast"
 
 // 通知类型
 type NotificationType = "system" | "order" | "review" | "promotion"
@@ -26,92 +27,148 @@ interface Notification {
   icon?: React.ReactNode
 }
 
-// 模拟通知数据
-const mockNotifications: Notification[] = [
-  {
-    id: "notif-001",
-    type: "system",
-    title: "系统维护通知",
-    message: "我们将于2024年3月15日凌晨2:00-4:00进行系统维护，期间可能无法访问部分功能。",
-    date: "2024-03-10",
-    read: true,
-    icon: <Info className="h-5 w-5 text-blue-500" />,
-  },
-  {
-    id: "notif-002",
-    type: "order",
-    title: "订单状态更新",
-    message: "您的订单 #ORD-002 已开始处理，预计3-5个工作日内完成配置。",
-    date: "2024-03-05",
-    read: false,
-    link: "/dashboard/user/orders",
-    icon: <ShoppingCart className="h-5 w-5 text-green-500" />,
-  },
-  {
-    id: "notif-003",
-    type: "review",
-    title: "评价获得回复",
-    message: '商家已回复您对"豪华轿车"的评价：感谢您的反馈，我们非常重视您的意见...',
-    date: "2024-03-01",
-    read: false,
-    link: "/dashboard/user/reviews",
-    icon: <MessageSquare className="h-5 w-5 text-purple-500" />,
-  },
-  {
-    id: "notif-004",
-    type: "promotion",
-    title: "限时优惠活动",
-    message: "春季特惠：所有豪华轿车系列配置升级享8折优惠，活动截止到2024年3月31日。",
-    date: "2024-02-28",
-    read: true,
-    link: "/cars/luxury-sedan",
-    icon: <AlertCircle className="h-5 w-5 text-red-500" />,
-  },
-  {
-    id: "notif-005",
-    type: "system",
-    title: "账户安全提醒",
-    message: "我们检测到您的账户在新设备上登录，如非本人操作，请立即修改密码。",
-    date: "2024-02-25",
-    read: true,
-    icon: <Info className="h-5 w-5 text-blue-500" />,
-  },
-  {
-    id: "notif-006",
-    type: "order",
-    title: "订单已完成",
-    message: "您的订单 #ORD-001 已完成，感谢您的购买！请前往订单详情页查看更多信息。",
-    date: "2024-02-20",
-    read: true,
-    link: "/dashboard/user/orders",
-    icon: <ShoppingCart className="h-5 w-5 text-green-500" />,
-  },
-  {
-    id: "notif-007",
-    type: "review",
-    title: "您的评价很受欢迎",
-    message: '您对"跑车系列"的评价已获得25个有帮助标记，感谢您的分享！',
-    date: "2024-02-15",
-    read: true,
-    link: "/dashboard/user/reviews",
-    icon: <MessageSquare className="h-5 w-5 text-purple-500" />,
-  },
-]
-
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
+  const { toast } = useToast()
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("all")
+
+  // 获取通知图标
+  const getNotificationIcon = (type: NotificationType) => {
+    switch(type) {
+      case "system":
+        return <Info className="h-5 w-5 text-blue-500" />
+      case "order":
+        return <ShoppingCart className="h-5 w-5 text-green-500" />
+      case "review":
+        return <MessageSquare className="h-5 w-5 text-purple-500" />
+      case "promotion":
+        return <AlertCircle className="h-5 w-5 text-red-500" />
+      default:
+        return <Bell className="h-5 w-5 text-muted-foreground" />
+    }
+  }
+
+  // 从API获取通知
+  const fetchNotifications = async (type?: string, unreadOnly?: boolean) => {
+    try {
+      setIsLoading(true)
+      
+      // 构建查询参数
+      const params = new URLSearchParams()
+      if (type && type !== 'all') {
+        params.append('type', type)
+      }
+      if (unreadOnly) {
+        params.append('unread', 'true')
+      }
+      
+      const queryString = params.toString()
+      const url = `/api/user/notifications${queryString ? `?${queryString}` : ''}`
+      
+      const response = await fetch(url)
+      
+      if (!response.ok) {
+        throw new Error('获取通知失败')
+      }
+      
+      const data = await response.json()
+      
+      // 添加图标到通知数据
+      const notificationsWithIcons = data.map((notification: Notification) => ({
+        ...notification,
+        icon: getNotificationIcon(notification.type)
+      }))
+      
+      setNotifications(notificationsWithIcons)
+    } catch (error) {
+      console.error('获取通知失败:', error)
+      toast({
+        title: "获取通知失败",
+        description: "无法加载通知列表，请稍后重试",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 初始加载通知
+  useEffect(() => {
+    fetchNotifications()
+  }, [])
 
   // 标记通知为已读
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map((notif) => (notif.id === id ? { ...notif, read: true } : notif)))
+  const markAsRead = async (id: string) => {
+    try {
+      const response = await fetch(`/api/user/notifications`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          notificationId: id
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('标记通知失败')
+      }
+
+      // 更新本地状态
+      setNotifications(notifications.map((notif) => 
+        notif.id === id ? { ...notif, read: true } : notif
+      ))
+
+      toast({
+        title: "已标记为已读",
+        description: "通知已更新",
+      })
+    } catch (error) {
+      console.error('标记通知失败:', error)
+      toast({
+        title: "操作失败",
+        description: "无法更新通知状态，请稍后重试",
+        variant: "destructive"
+      })
+    }
   }
 
   // 标记所有通知为已读
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((notif) => ({ ...notif, read: true })))
+  const markAllAsRead = async () => {
+    try {
+      const response = await fetch(`/api/user/notifications`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          all: true
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('标记所有通知失败')
+      }
+
+      // 更新本地状态
+      setNotifications(notifications.map((notif) => ({ ...notif, read: true })))
+
+      toast({
+        title: "全部已读",
+        description: "所有通知已标记为已读",
+      })
+    } catch (error) {
+      console.error('标记所有通知失败:', error)
+      toast({
+        title: "操作失败",
+        description: "无法更新通知状态，请稍后重试",
+        variant: "destructive"
+      })
+    }
   }
 
-  // 获取未读通知���量
+  // 获取未读通知数量
   const getUnreadCount = (type?: NotificationType) => {
     return notifications.filter((notif) => !notif.read && (type ? notif.type === type : true)).length
   }
@@ -119,6 +176,17 @@ export default function NotificationsPage() {
   // 根据类型筛选通知
   const getFilteredNotifications = (type?: NotificationType) => {
     return notifications.filter((notif) => (type ? notif.type === type : true))
+  }
+
+  // 处理标签切换
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+    // 当切换标签时重新获取对应类型的通知
+    if (value === 'all') {
+      fetchNotifications()
+    } else {
+      fetchNotifications(value)
+    }
   }
 
   return (
@@ -135,13 +203,24 @@ export default function NotificationsPage() {
               <CardTitle>通知中心</CardTitle>
               <CardDescription>您有 {getUnreadCount()} 条未读通知</CardDescription>
             </div>
-            <Button variant="outline" onClick={markAllAsRead} disabled={getUnreadCount() === 0}>
-              全部标为已读
+            <Button 
+              variant="outline" 
+              onClick={markAllAsRead} 
+              disabled={getUnreadCount() === 0 || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  加载中...
+                </>
+              ) : (
+                "全部标为已读"
+              )}
             </Button>
           </CardHeader>
 
           <CardContent>
-            <Tabs defaultValue="all">
+            <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange}>
               <TabsList>
                 <TabsTrigger value="all" className="relative">
                   全部通知
@@ -169,59 +248,66 @@ export default function NotificationsPage() {
                 </TabsTrigger>
               </TabsList>
 
-              {["all", "system", "order", "review"].map((tab) => (
-                <TabsContent key={tab} value={tab} className="mt-4 space-y-4">
-                  {getFilteredNotifications(tab === "all" ? undefined : (tab as NotificationType)).length > 0 ? (
-                    getFilteredNotifications(tab === "all" ? undefined : (tab as NotificationType)).map(
-                      (notification) => (
-                        <div
-                          key={notification.id}
-                          className={cn(
-                            "flex gap-4 p-4 rounded-lg transition-colors",
-                            notification.read ? "bg-card" : "bg-muted/50",
-                            "border",
-                          )}
-                          onClick={() => markAsRead(notification.id)}
-                        >
-                          <div className="flex-shrink-0 mt-1">
-                            {notification.icon || <Bell className="h-5 w-5 text-muted-foreground" />}
-                          </div>
-
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <h4 className={cn("font-medium", !notification.read && "font-semibold")}>
-                                {notification.title}
-                              </h4>
-                              <span className="text-xs text-muted-foreground">{notification.date}</span>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <span className="ml-2 text-muted-foreground">加载通知中...</span>
+                </div>
+              ) : (
+                ["all", "system", "order", "review"].map((tab) => (
+                  <TabsContent key={tab} value={tab} className="mt-4 space-y-4">
+                    {getFilteredNotifications(tab === "all" ? undefined : (tab as NotificationType)).length > 0 ? (
+                      getFilteredNotifications(tab === "all" ? undefined : (tab as NotificationType)).map(
+                        (notification) => (
+                          <div
+                            key={notification.id}
+                            className={cn(
+                              "flex gap-4 p-4 rounded-lg transition-colors",
+                              notification.read ? "bg-card" : "bg-muted/50",
+                              "border cursor-pointer hover:bg-muted/30",
+                            )}
+                            onClick={() => !notification.read && markAsRead(notification.id)}
+                          >
+                            <div className="flex-shrink-0 mt-1">
+                              {notification.icon || <Bell className="h-5 w-5 text-muted-foreground" />}
                             </div>
 
-                            <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <h4 className={cn("font-medium", !notification.read && "font-semibold")}>
+                                  {notification.title}
+                                </h4>
+                                <span className="text-xs text-muted-foreground">{notification.date}</span>
+                              </div>
 
-                            <div className="flex justify-between items-center mt-2">
-                              {notification.link && (
-                                <Button variant="link" className="p-0 h-auto" asChild>
-                                  <a href={notification.link}>查看详情</a>
-                                </Button>
-                              )}
+                              <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
 
-                              {!notification.read && (
-                                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                                  未读
-                                </Badge>
-                              )}
+                              <div className="flex justify-between items-center mt-2">
+                                {notification.link && (
+                                  <Button variant="link" className="p-0 h-auto" asChild>
+                                    <a href={notification.link}>查看详情</a>
+                                  </Button>
+                                )}
+
+                                {!notification.read && (
+                                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                                    未读
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ),
-                    )
-                  ) : (
-                    <div className="text-center py-12">
-                      <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                      <p className="text-muted-foreground">暂无通知</p>
-                    </div>
-                  )}
-                </TabsContent>
-              ))}
+                        ),
+                      )
+                    ) : (
+                      <div className="text-center py-12">
+                        <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                        <p className="text-muted-foreground">暂无通知</p>
+                      </div>
+                    )}
+                  </TabsContent>
+                ))
+              )}
             </Tabs>
           </CardContent>
         </Card>

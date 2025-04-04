@@ -25,6 +25,15 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Badge } from "@/components/ui/badge"
+
+// 导航项接口
+interface NavItem {
+  title: string;
+  href: string;
+  icon: React.ReactNode;
+  badge?: number;
+}
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -40,6 +49,7 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
     email: "",
     avatar: "/placeholder.svg?height=40&width=40"
   })
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
 
   // 从会话中获取用户信息
   useEffect(() => {
@@ -53,7 +63,31 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
     }
   }, [session, userType])
 
-  const userNavItems = [
+  // 获取未读通知数量
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        if (!session?.user) return
+        
+        const response = await fetch('/api/user/notifications?unread=true')
+        if (response.ok) {
+          const data = await response.json()
+          setUnreadNotifications(data.length)
+        }
+      } catch (error) {
+        console.error('获取未读通知数量失败:', error)
+      }
+    }
+    
+    fetchUnreadCount()
+    
+    // 设置定时器，每分钟刷新一次未读通知数量
+    const intervalId = setInterval(fetchUnreadCount, 60000)
+    
+    return () => clearInterval(intervalId)
+  }, [session])
+
+  const userNavItems: NavItem[] = [
     {
       title: "概览",
       href: "/dashboard/user",
@@ -83,6 +117,7 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
       title: "消息通知",
       href: "/dashboard/user/notifications",
       icon: <Bell className="h-5 w-5" />,
+      badge: unreadNotifications > 0 ? unreadNotifications : undefined,
     },
     {
       title: "个人设置",
@@ -91,7 +126,7 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
     },
   ]
 
-  const dealerNavItems = [
+  const dealerNavItems: NavItem[] = [
     {
       title: "概览",
       href: "/dashboard/dealer",
@@ -169,7 +204,12 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
                     )}
                   >
                     {item.icon}
-                    {item.title}
+                    <span className="flex-1">{item.title}</span>
+                    {item.badge && (
+                      <Badge className="ml-auto bg-primary text-primary-foreground">
+                        {item.badge}
+                      </Badge>
+                    )}
                   </Link>
                 ))}
               </nav>
@@ -215,7 +255,12 @@ export default function DashboardLayout({ children, userType }: DashboardLayoutP
                 )}
               >
                 {item.icon}
-                {item.title}
+                <span className="flex-1">{item.title}</span>
+                {item.badge && (
+                  <Badge className="ml-auto bg-primary text-primary-foreground">
+                    {item.badge}
+                  </Badge>
+                )}
               </Link>
             ))}
           </nav>

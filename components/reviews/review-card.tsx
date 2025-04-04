@@ -38,11 +38,37 @@ export default function ReviewCard({ review, detailed = false, onReviewDeleted }
   const formattedDate = review.date
 
   // 处理标记为有帮助
-  const handleMarkHelpful = () => {
+  const handleMarkHelpful = async () => {
     if (!hasMarkedHelpful) {
-      markReviewAsHelpful(review.id)
-      setHelpfulCount((prev) => prev + 1)
-      setHasMarkedHelpful(true)
+      try {
+        const response = await fetch("/api/reviews/helpful", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ reviewId: review.id }),
+        });
+
+        if (!response.ok) {
+          throw new Error("标记评价为有帮助失败");
+        }
+
+        const data = await response.json();
+        setHelpfulCount(data.helpfulCount);
+        setHasMarkedHelpful(true);
+        
+        toast({
+          title: "已标记为有帮助",
+          description: "感谢您的反馈",
+        });
+      } catch (error) {
+        console.error("标记评价为有帮助失败:", error);
+        toast({
+          title: "操作失败",
+          description: "标记评价为有帮助时出现错误",
+          variant: "destructive",
+        });
+      }
     }
   }
   

@@ -16,6 +16,11 @@ export interface Review {
   images?: string[] // 评价图片（可选）
   tags: string[] // 评价标签，如"性能好"、"舒适度高"等
   verified: boolean // 是否是已验证购买
+  car?: {
+    id: string
+    name: string
+    thumbnail: string
+  }
 }
 
 // 获取特定车型的所有评价
@@ -71,9 +76,15 @@ export async function getUserReviews(userId: string): Promise<Review[]> {
 // 获取特定评价
 export async function getReviewById(reviewId: string): Promise<Review | undefined> {
   try {
-    // 由于没有直接获取单个评论的API，我们先获取用户的所有评论，然后筛选
-    const userReviews = await getUserReviews("current")
-    return userReviews.find((review) => review.id === reviewId)
+    // 使用新的API接口直接获取单个评价
+    const response = await fetch(`/api/user/reviews/${reviewId}`)
+    
+    if (!response.ok) {
+      throw new Error(`获取评价详情失败: ${response.statusText}`)
+    }
+    
+    const review = await response.json()
+    return review
   } catch (error) {
     console.error("获取评价详情失败:", error)
     return undefined

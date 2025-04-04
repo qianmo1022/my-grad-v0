@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/db';
 import { authOptions } from '@/lib/auth';
+import { createOrderNotification } from '@/lib/notification';
 
 // 处理订单提交请求
 export async function POST(request: Request) {
@@ -85,16 +86,38 @@ export async function POST(request: Request) {
       },
     });
     
-    // 创建通知
-    await prisma.notification.create({
-      data: {
-        userId: session.user.id,
-        type: 'ORDER',
-        title: '订单已提交',
-        message: `您的${order.car.name}订单已成功提交，订单号：${order.id}`,
-        link: `/dashboard/user/orders`,
-      },
-    });
+    // 创建用户通知
+    await createOrderNotification(
+      session.user.id,
+      '订单已提交',
+      `您的${order.car.name}订单已成功提交，订单号：${order.id}`,
+      order.id
+    );
+    
+    // 同时创建给经销商的通知 - 我们需要一种不同的方式来查找经销商账户
+    try {
+      // 找到与该经销商关联的用户（这需要一个不同的方式，因为User和Dealer之间没有直接关联）
+      // 这里我们假设经销商的Email可能与用户的Email相同
+      if (dealer) {
+        const dealerUser = await prisma.user.findUnique({
+          where: {
+            email: dealer.email // 假设经销商的Email与对应用户的Email相同
+          }
+        });
+        
+        if (dealerUser) {
+          await createOrderNotification(
+            dealerUser.id,
+            '新订单通知',
+            `您有一个新的${order.car.name}订单需要处理，订单号：${order.id}`,
+            order.id
+          );
+        }
+      }
+    } catch (dealerNotifyError) {
+      // 如果经销商通知失败不影响主流程
+      console.error('通知经销商失败:', dealerNotifyError);
+    }
     
     return NextResponse.json({
       success: true,

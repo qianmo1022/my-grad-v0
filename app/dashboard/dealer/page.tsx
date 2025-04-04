@@ -8,6 +8,7 @@ import StatsCard from "@/components/dashboard/stats-card"
 import RecentOrders from "@/components/dashboard/recent-orders"
 import CarManagement from "@/components/dashboard/car-management"
 import SalesChart from "@/components/dashboard/sales-chart"
+import TopReviews from "@/components/dashboard/dealer/top-reviews"
 import { Car, Users, CreditCard, TrendingUp } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -309,7 +310,10 @@ export default function DealerDashboard() {
               <RecentOrders orders={orders} userType="dealer" />
             </div>
 
-            <CarManagement cars={cars} isLoading={isLoading} />
+            <div className="grid gap-6 md:grid-cols-2">
+              <CarManagement cars={cars} isLoading={isLoading} />
+              <TopReviews />
+            </div>
           </>
         )}
       </div>
