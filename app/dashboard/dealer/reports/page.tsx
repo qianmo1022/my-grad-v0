@@ -9,52 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/components/ui/use-toast"
 import { Download, TrendingUp, TrendingDown, DollarSign, BarChart3, Calendar, Car, Clock, FileBarChart } from "lucide-react"
-
-// 图表组件 - 这里使用的是模拟组件，实际项目中可以使用recharts或chart.js等图表库
-const BarChart = ({ data, variant = "default" }: { data: any[], variant?: string }) => {
-  return (
-    <div className="w-full h-60 mt-4 flex items-end justify-between gap-2">
-      {data.map((item, index) => (
-        <div key={index} className="flex flex-col items-center">
-          <div 
-            className={`w-10 ${variant === 'sales' ? 'bg-blue-500' : 'bg-primary'} rounded-t`} 
-            style={{ height: `${(item.sales/10) * 150}px` }}
-          ></div>
-          <span className="text-xs mt-2">{item.month}</span>
-          <span className="text-xs text-muted-foreground">{item.sales}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// 折线图组件
-const LineChart = ({ data }: { data: any[] }) => {
-  return (
-    <div className="w-full h-60 mt-4 relative">
-      <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <span className="text-sm">折线图展示区域</span>
-          <div className="mt-2">实际开发中使用recharts或chart.js</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// 饼图组件
-const PieChart = ({ data }: { data: any[] }) => {
-  return (
-    <div className="w-full h-60 mt-4 relative">
-      <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-        <div className="text-center">
-          <span className="text-sm">饼图展示区域</span>
-          <div className="mt-2">实际开发中使用recharts或chart.js</div>
-        </div>
-      </div>
-    </div>
-  )
-}
+import { BarChart, LineChart, PieChart } from "@/components/dashboard/echarts/charts"
+import { formatCurrency } from "@/lib/utils"
 
 // 热门车型数据
 interface TopCarModel {
@@ -88,6 +44,25 @@ export default function DealerReports() {
   })
   const [totalRevenue, setTotalRevenue] = useState("¥2,560,000")
   const [averageOrderValue, setAverageOrderValue] = useState("¥320,000")
+  
+  // 分析数据
+  const [salesAnalytics, setSalesAnalytics] = useState({
+    salesDistribution: [],
+    salesForecast: []
+  })
+  const [customerAnalytics, setCustomerAnalytics] = useState({
+    ageDistribution: [],
+    sourceDistribution: []
+  })
+  const [inventoryAnalytics, setInventoryAnalytics] = useState({
+    turnoverRates: [],
+    inventoryDistribution: []
+  })
+  const [analyticsLoading, setAnalyticsLoading] = useState({
+    sales: false,
+    customers: false,
+    inventory: false
+  })
 
   // 获取销售数据
   useEffect(() => {
@@ -126,6 +101,52 @@ export default function DealerReports() {
 
     fetchSalesData()
   }, [timeRange, toast])
+  
+  // 获取销售分析数据
+  const fetchAnalyticsData = async (type: string) => {
+    try {
+      setAnalyticsLoading(prev => ({ ...prev, [type]: true }))
+      
+      const response = await fetch(`/api/dealer/analytics?type=${type}`)
+      if (!response.ok) {
+        throw new Error(`获取${type}分析数据失败`)
+      }
+      
+      const data = await response.json()
+      
+      switch (type) {
+        case 'sales':
+          setSalesAnalytics(data)
+          break
+        case 'customers':
+          setCustomerAnalytics(data)
+          break
+        case 'inventory':
+          setInventoryAnalytics(data)
+          break
+      }
+    } catch (error) {
+      console.error(`获取${type}分析数据错误:`, error)
+      toast({
+        title: "数据加载失败",
+        description: `无法加载${type}分析数据，请稍后重试`,
+        variant: "destructive",
+      })
+    } finally {
+      setAnalyticsLoading(prev => ({ ...prev, [type]: false }))
+    }
+  }
+  
+  // 当切换标签时加载相应的分析数据
+  const handleTabChange = (value: string) => {
+    if (value === 'sales' && salesAnalytics.salesDistribution.length === 0) {
+      fetchAnalyticsData('sales')
+    } else if (value === 'customers' && customerAnalytics.ageDistribution.length === 0) {
+      fetchAnalyticsData('customers')
+    } else if (value === 'inventory' && inventoryAnalytics.turnoverRates.length === 0) {
+      fetchAnalyticsData('inventory')
+    }
+  }
 
   // 导出报表
   const exportReport = () => {
@@ -242,7 +263,11 @@ export default function DealerReports() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <BarChart data={salesData[timeRange as keyof SalesData]} variant="sales" />
+                  <BarChart 
+                    data={salesData[timeRange as keyof SalesData]} 
+                    height="250px"
+                    loading={isLoading}
+                  />
                 </CardContent>
               </Card>
               
@@ -287,7 +312,7 @@ export default function DealerReports() {
               </Card>
             </div>
 
-            <Tabs defaultValue="sales" className="w-full">
+            <Tabs defaultValue="sales" className="w-full" onValueChange={handleTabChange}>
               <TabsList className="grid w-full max-w-md grid-cols-3">
                 <TabsTrigger value="sales">销售分析</TabsTrigger>
                 <TabsTrigger value="customers">客户分析</TabsTrigger>
@@ -295,75 +320,50 @@ export default function DealerReports() {
               </TabsList>
               <TabsContent value="sales" className="mt-4">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>销售分布</CardTitle>
-                      <CardDescription>按车型类别的销售分布</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <PieChart data={[]} />
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>销售预测</CardTitle>
-                      <CardDescription>未来3个月的销售预测</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <LineChart data={[]} />
-                    </CardContent>
-                  </Card>
+                  <PieChart 
+                    data={salesAnalytics.salesDistribution} 
+                    loading={analyticsLoading.sales}
+                    title="销售分布"
+                    description="按车型类别的销售分布"
+                  />
+                  <LineChart 
+                    data={salesAnalytics.salesForecast} 
+                    loading={analyticsLoading.sales}
+                    title="销售预测"
+                    description="未来3个月的销售预测"
+                  />
                 </div>
               </TabsContent>
               <TabsContent value="customers" className="mt-4">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>客户年龄分布</CardTitle>
-                      <CardDescription>按年龄段的客户分布</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <BarChart data={[
-                        { month: "18-24", sales: 5 },
-                        { month: "25-34", sales: 15 },
-                        { month: "35-44", sales: 22 },
-                        { month: "45-54", sales: 18 },
-                        { month: "55-64", sales: 10 },
-                        { month: "65+", sales: 7 }
-                      ]} />
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>客户来源</CardTitle>
-                      <CardDescription>按获客渠道的分布</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <PieChart data={[]} />
-                    </CardContent>
-                  </Card>
+                  <BarChart 
+                    data={customerAnalytics.ageDistribution} 
+                    loading={analyticsLoading.customers}
+                    title="客户年龄分布"
+                    description="按年龄段的客户分布"
+                  />
+                  <PieChart 
+                    data={customerAnalytics.sourceDistribution} 
+                    loading={analyticsLoading.customers}
+                    title="客户来源"
+                    description="按获客渠道的分布"
+                  />
                 </div>
               </TabsContent>
               <TabsContent value="inventory" className="mt-4">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>库存周转率</CardTitle>
-                      <CardDescription>各车型的库存周转情况</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <LineChart data={[]} />
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>库存分布</CardTitle>
-                      <CardDescription>按车型类别的库存分布</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <PieChart data={[]} />
-                    </CardContent>
-                  </Card>
+                  <LineChart 
+                    data={inventoryAnalytics.turnoverRates} 
+                    loading={analyticsLoading.inventory}
+                    title="库存周转率"
+                    description="各车型的库存周转情况"
+                  />
+                  <PieChart 
+                    data={inventoryAnalytics.inventoryDistribution} 
+                    loading={analyticsLoading.inventory}
+                    title="库存分布"
+                    description="按车型类别的库存分布"
+                  />
                 </div>
               </TabsContent>
             </Tabs>
@@ -372,4 +372,4 @@ export default function DealerReports() {
       </div>
     </DashboardLayout>
   )
-} 
+}
