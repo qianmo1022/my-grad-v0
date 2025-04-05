@@ -13,12 +13,8 @@ export async function GET(request: Request) {
     
     // 查询条件
     const where: any = {
-      // 查找与该商家关联的订单中的车型
-      orders: {
-        some: {
-          dealerId: dealerId
-        }
-      }
+      // 直接使用dealerId字段查询
+      dealerId: dealerId
     };
     
     // 如果指定了状态，添加状态过滤
@@ -52,7 +48,9 @@ export async function GET(request: Request) {
     
     return NextResponse.json(cars);
   } catch (error) {
-    console.error('获取车型列表失败:', error);
+    // 修复错误处理，确保传递给console.error的是有效对象
+    const errorMessage = error instanceof Error ? error.message : '未知错误';
+    console.error('获取车型列表失败:', { message: errorMessage });
     return NextResponse.json({ error: '获取车型列表失败' }, { status: 500 });
   }
-} 
+}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { getCarById, getCarConfigOptions, type ConfigOption } from "@/lib/car-data"
+import { type ConfigOption, type ConfigCategory, type CarModel } from "@/lib/car-data"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, ShoppingCart, Save } from "lucide-react"
@@ -16,30 +16,62 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 interface ConfiguratorProps {
   carId: string
+  preloadedCar?: CarModel
+  preloadedConfigCategories?: ConfigCategory[]
 }
 
-export default function Configurator({ carId }: ConfiguratorProps) {
+export default function Configurator({ carId, preloadedCar, preloadedConfigCategories }: ConfiguratorProps) {
   const router = useRouter()
   const { data: session } = useSession()
-  const [car, setCar] = useState<any>(null)
-  const [configCategories, setConfigCategories] = useState(getCarConfigOptions(carId))
+  const [car, setCar] = useState<CarModel | null>(preloadedCar || null)
+  const [configCategories, setConfigCategories] = useState<ConfigCategory[]>(
+    preloadedConfigCategories || []
+  )
   const [activeTab, setActiveTab] = useState(configCategories[0]?.id || "")
   const [selectedOptions, setSelectedOptions] = useState<Record<string, ConfigOption>>({})
-  const [totalPrice, setTotalPrice] = useState(0)
+  const [totalPrice, setTotalPrice] = useState(preloadedCar?.basePrice || 0)
   const [isInitialized, setIsInitialized] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(!preloadedCar)
 
-  // 加载汽车数据
+  // 加载汽车数据和配置选项（如果没有预加载）
   useEffect(() => {
-    const loadCarData = async () => {
-      setIsLoading(true)
-      const carData = await getCarById(carId)
-      setCar(carData)
-      setTotalPrice(carData?.basePrice || 0)
-      setIsLoading(false)
+    const loadData = async () => {
+      if (!preloadedCar) {
+        setIsLoading(true)
+        try {
+          // 使用 fetch API 加载车辆数据
+          const carResponse = await fetch(`/api/cars/${carId}`);
+          if (carResponse.ok) {
+            const carData = await carResponse.json();
+            setCar(carData);
+            setTotalPrice(carData?.basePrice || 0);
+          }
+        } catch (error) {
+          console.error('获取车辆数据失败:', error);
+        }
+      }
+
+      if (!preloadedConfigCategories || preloadedConfigCategories.length === 0) {
+        try {
+          // 使用 fetch API 加载配置选项
+          const configResponse = await fetch(`/api/cars/${carId}/config-options`);
+          if (configResponse.ok) {
+            const configData = await configResponse.json();
+            setConfigCategories(configData);
+            if (configData.length > 0) {
+              setActiveTab(configData[0]?.id || "");
+            }
+          }
+        } catch (error) {
+          console.error('获取配置选项失败:', error);
+        }
+      }
+      
+      setIsLoading(false);
     }
-    loadCarData()
-  }, [carId])
+    
+    loadData();
+  }, [carId, preloadedCar, preloadedConfigCategories])
 
   // 初始化选择的配置（每个类别的第一个选项）- 只在组件挂载和carId/configCategories变化时执行一次
   useEffect(() => {

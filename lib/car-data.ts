@@ -1,4 +1,6 @@
 // 汽车数据类型定义
+import { prisma } from '@/lib/db';
+
 export interface CarModel {
   id: string
   name: string
@@ -10,6 +12,7 @@ export interface CarModel {
 
 export interface ConfigCategory {
   id: string
+  categoryKey: string
   name: string
   description: string
   options: ConfigOption[]
@@ -17,260 +20,228 @@ export interface ConfigCategory {
 
 export interface ConfigOption {
   id: string
+  optionKey: string
   name: string
   description: string
   price: number
   thumbnail?: string
   colorCode?: string
+  categoryId?: string
 }
 
-// 模拟汽车数据
-export const carModels: CarModel[] = [
-  {
-    id: "luxury-sedan",
-    name: "豪华轿车",
-    basePrice: 350000,
-    description: "豪华舒适的驾乘体验，配备先进科技和精致内饰",
-    thumbnail: "/placeholder.svg?height=300&width=500",
-    defaultColor: "#1a1a1a",
-  },
-  {
-    id: "city-suv",
-    name: "城市SUV",
-    basePrice: 280000,
-    description: "灵活多变的城市出行选择，兼具空间和操控性",
-    thumbnail: "/placeholder.svg?height=300&width=500",
-    defaultColor: "#2c3e50",
-  },
-  {
-    id: "sports-car",
-    name: "跑车系列",
-    basePrice: 580000,
-    description: "极致性能与优雅设计的完美结合",
-    thumbnail: "/placeholder.svg?height=300&width=500",
-    defaultColor: "#c0392b",
-  },
-]
+// 判断是否在服务器端
+const isServer = typeof window === 'undefined';
+
+// 获取所有车型
+export async function getAllCars(): Promise<CarModel[]> {
+  try {
+    if (isServer) {
+      // 服务器端直接使用 Prisma
+      const cars = await prisma.car.findMany({
+        where: { status: 'active' },
+        orderBy: { name: 'asc' }
+      });
+      
+      return cars.map(car => ({
+        id: car.id,
+        name: car.name,
+        basePrice: car.basePrice,
+        description: car.description,
+        thumbnail: car.thumbnail,
+        defaultColor: car.defaultColor
+      }));
+    } else {
+      // 客户端使用 fetch API
+      const response = await fetch('/api/cars');
+      if (!response.ok) {
+        throw new Error('获取车型列表失败');
+      }
+      return await response.json();
+    }
+  } catch (error) {
+    console.error('获取车型列表失败:', error);
+    return [];
+  }
+}
 
 // 获取特定车型的配置选项
-export function getCarConfigOptions(carId: string): ConfigCategory[] {
-  // 所有车型共享的颜色选项
-  const colorOptions: ConfigCategory = {
-    id: "exterior-color",
-    name: "外观颜色",
-    description: "选择您喜欢的车身颜色",
-    options: [
-      { id: "black", name: "曜石黑", description: "经典永恒的黑色", price: 0, colorCode: "#1a1a1a" },
-      { id: "white", name: "珍珠白", description: "纯净优雅的白色", price: 0, colorCode: "#f5f5f5" },
-      { id: "silver", name: "流星银", description: "现代感十足的银色", price: 0, colorCode: "#c0c0c0" },
-      { id: "blue", name: "深海蓝", description: "神秘深邃的蓝色", price: 5000, colorCode: "#0f3460" },
-      { id: "red", name: "熔岩红", description: "热情奔放的红色", price: 8000, colorCode: "#c0392b" },
-    ],
-  }
+export async function getCarConfigOptions(carId: string): Promise<ConfigCategory[]> {
+  try {
+    if (isServer) {
+      // 服务器端直接使用 Prisma
+      // 获取与该车型关联的所有配置选项
+      const options = await prisma.carConfigOption.findMany({
+        where: { carId: carId },
+        include: {
+          category: true
+        },
+        orderBy: [
+          { category: { name: 'asc' } },
+          { name: 'asc' }
+        ]
+      });
 
-  // 所有车型共享的轮毂选项
-  const wheelOptions: ConfigCategory = {
-    id: "wheels",
-    name: "轮毂样式",
-    description: "选择适合您风格的轮毂",
-    options: [
-      {
-        id: "standard",
-        name: "标准轮毂",
-        description: "17寸铝合金轮毂",
-        price: 0,
-        thumbnail: "/placeholder.svg?height=100&width=100",
-      },
-      {
-        id: "sport",
-        name: "运动轮毂",
-        description: "19寸运动轮毂",
-        price: 12000,
-        thumbnail: "/placeholder.svg?height=100&width=100",
-      },
-      {
-        id: "luxury",
-        name: "豪华轮毂",
-        description: "20寸多辐豪华轮毂",
-        price: 18000,
-        thumbnail: "/placeholder.svg?height=100&width=100",
-      },
-    ],
-  }
+      // 如果没有配置选项，则返回空数组
+      if (options.length === 0) {
+        return [];
+      }
 
-  // 根据车型ID返回特定的配置选项
-  switch (carId) {
-    case "luxury-sedan":
-      return [
-        colorOptions,
-        wheelOptions,
-        {
-          id: "interior",
-          name: "内饰选择",
-          description: "选择豪华内饰材质和颜色",
-          options: [
-            {
-              id: "standard-interior",
-              name: "标准内饰",
-              description: "高级织物座椅",
-              price: 0,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-            {
-              id: "leather",
-              name: "真皮内饰",
-              description: "Nappa真皮座椅",
-              price: 25000,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-            {
-              id: "premium-leather",
-              name: "高级真皮内饰",
-              description: "顶级真皮座椅带按摩功能",
-              price: 45000,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-          ],
-        },
-        {
-          id: "tech-package",
-          name: "科技套件",
-          description: "先进的技术配置",
-          options: [
-            {
-              id: "standard-tech",
-              name: "标准科技套件",
-              description: "基础导航和音响系统",
-              price: 0,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-            {
-              id: "advanced-tech",
-              name: "高级科技套件",
-              description: "高级导航、环绕音响和增强驾驶辅助",
-              price: 35000,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-            {
-              id: "premium-tech",
-              name: "顶级科技套件",
-              description: "全套高级驾驶辅助系统和顶级音响",
-              price: 60000,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-          ],
-        },
-      ]
-    case "city-suv":
-      return [
-        colorOptions,
-        wheelOptions,
-        {
-          id: "interior",
-          name: "内饰选择",
-          description: "选择舒适内饰材质和颜色",
-          options: [
-            {
-              id: "standard-interior",
-              name: "标准内饰",
-              description: "高级织物座椅",
-              price: 0,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-            {
-              id: "leather",
-              name: "真皮内饰",
-              description: "真皮座椅",
-              price: 18000,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-          ],
-        },
-        {
-          id: "roof",
-          name: "车顶选项",
-          description: "选择车顶样式",
-          options: [
-            {
-              id: "standard-roof",
-              name: "标准车顶",
-              description: "标准车顶",
-              price: 0,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-            {
-              id: "panoramic",
-              name: "全景天窗",
-              description: "大型全景天窗",
-              price: 22000,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-          ],
-        },
-      ]
-    case "sports-car":
-      return [
-        colorOptions,
-        wheelOptions,
-        {
-          id: "performance",
-          name: "性能套件",
-          description: "提升驾驶性能",
-          options: [
-            {
-              id: "standard-performance",
-              name: "标准性能",
-              description: "标准发动机和悬挂",
-              price: 0,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-            {
-              id: "sport-performance",
-              name: "运动性能套件",
-              description: "运动调校发动机和悬挂",
-              price: 45000,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-            {
-              id: "track-performance",
-              name: "赛道性能套件",
-              description: "赛道级发动机和悬挂调校",
-              price: 85000,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-          ],
-        },
-        {
-          id: "interior",
-          name: "内饰选择",
-          description: "选择运动内饰材质和颜色",
-          options: [
-            {
-              id: "sport-interior",
-              name: "运动内饰",
-              description: "运动座椅和方向盘",
-              price: 0,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-            {
-              id: "premium-sport",
-              name: "高级运动内饰",
-              description: "碳纤维装饰和Alcantara材质",
-              price: 38000,
-              thumbnail: "/placeholder.svg?height=100&width=100",
-            },
-          ],
-        },
-      ]
-    default:
-      return [colorOptions, wheelOptions]
+      // 按分类组织选项
+      const categoriesMap = new Map<string, ConfigCategory>();
+      
+      for (const option of options) {
+        const category = option.category;
+        
+        if (!categoriesMap.has(category.id)) {
+          categoriesMap.set(category.id, {
+            id: category.id,
+            categoryKey: category.categoryKey,
+            name: category.name,
+            description: category.description,
+            options: []
+          });
+        }
+        
+        const configOption: ConfigOption = {
+          id: option.id,
+          optionKey: option.optionKey,
+          name: option.name,
+          description: option.description,
+          price: option.price,
+          thumbnail: option.thumbnail || undefined,
+          colorCode: option.colorCode || undefined,
+          categoryId: category.id
+        };
+        
+        categoriesMap.get(category.id)!.options.push(configOption);
+      }
+      
+      // 转换为数组并返回
+      return Array.from(categoriesMap.values());
+    } else {
+      // 客户端使用 fetch API
+      const response = await fetch(`/api/cars/${carId}/config-options`);
+      if (!response.ok) {
+        throw new Error('获取车型配置选项失败');
+      }
+      const data = await response.json();
+      return data;
+    }
+  } catch (error) {
+    console.error('获取车型配置选项失败:', error);
+    return [];
   }
 }
 
 // 获取特定车型信息
 export async function getCarById(carId: string): Promise<CarModel | undefined> {
-  // 模拟异步操作
-  await new Promise(resolve => setTimeout(resolve, 100))
-  return carModels.find(car => car.id === carId)
+  try {
+    if (isServer) {
+      // 服务器端直接使用 Prisma
+      const car = await prisma.car.findUnique({
+        where: { id: carId }
+      });
+      
+      if (!car) {
+        return undefined;
+      }
+      
+      return {
+        id: car.id,
+        name: car.name,
+        basePrice: car.basePrice,
+        description: car.description,
+        thumbnail: car.thumbnail,
+        defaultColor: car.defaultColor
+      };
+    } else {
+      // 客户端使用 fetch API
+      const response = await fetch(`/api/cars/${carId}`);
+      if (!response.ok) {
+        throw new Error('获取车型信息失败');
+      }
+      return await response.json();
+    }
+  } catch (error) {
+    console.error('获取车型信息失败:', error);
+    return undefined;
+  }
+}
+
+// 获取经销商的车型列表
+export async function getDealerCars(dealerId: string): Promise<CarModel[]> {
+  try {
+    if (isServer) {
+      // 服务器端直接使用 Prisma
+      const cars = await prisma.car.findMany({
+        where: { 
+          dealerId: dealerId,
+          status: 'active'
+        },
+        orderBy: { name: 'asc' }
+      });
+      
+      return cars.map(car => ({
+        id: car.id,
+        name: car.name,
+        basePrice: car.basePrice,
+        description: car.description,
+        thumbnail: car.thumbnail,
+        defaultColor: car.defaultColor
+      }));
+    } else {
+      // 客户端使用 fetch API
+      const response = await fetch(`/api/dealers/${dealerId}/cars`);
+      if (!response.ok) {
+        throw new Error('获取经销商车型列表失败');
+      }
+      return await response.json();
+    }
+  } catch (error) {
+    console.error('获取经销商车型列表失败:', error);
+    return [];
+  }
+}
+
+// 获取所有配置分类
+export async function getAllConfigCategories(): Promise<ConfigCategory[]> {
+  try {
+    if (isServer) {
+      // 服务器端直接使用 Prisma
+      const categories = await prisma.carConfigCategory.findMany({
+        orderBy: { name: 'asc' },
+        include: {
+          options: true
+        }
+      });
+      
+      return categories.map(category => ({
+        id: category.id,
+        categoryKey: category.categoryKey,
+        name: category.name,
+        description: category.description,
+        options: category.options.map(option => ({
+          id: option.id,
+          optionKey: option.optionKey,
+          name: option.name,
+          description: option.description,
+          price: option.price,
+          thumbnail: option.thumbnail || undefined,
+          colorCode: option.colorCode || undefined,
+          categoryId: category.id
+        }))
+      }));
+    } else {
+      // 客户端使用 fetch API
+      const response = await fetch('/api/config-categories');
+      if (!response.ok) {
+        throw new Error('获取配置分类失败');
+      }
+      return await response.json();
+    }
+  } catch (error) {
+    console.error('获取配置分类失败:', error);
+    return [];
+  }
 }
 

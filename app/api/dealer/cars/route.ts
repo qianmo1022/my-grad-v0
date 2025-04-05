@@ -20,7 +20,10 @@ export async function GET(request: Request) {
     const status = searchParams.get('status'); // 可选的状态过滤
     
     // 构建查询条件
-    const where: any = {};
+    const where: any = {
+      // 只查询当前商家的车型
+      dealerId: session.user.id
+    };
     
     // 如果指定了状态，添加状态过滤
     if (status) {
@@ -122,7 +125,12 @@ export async function POST(request: Request) {
         description,
         thumbnail,
         defaultColor,
-        status: 'draft' // 确保新车型为草稿状态
+        status: 'draft', // 确保新车型为草稿状态
+        dealer: {
+          connect: {
+            id: session.user.id
+          }
+        } // 通过 connect 关联当前登录的商家ID
       }
     });
     

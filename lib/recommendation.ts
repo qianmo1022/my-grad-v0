@@ -1,4 +1,4 @@
-import { type CarModel, type ConfigOption, getCarById, getCarConfigOptions } from "./car-data"
+import { type CarModel, type ConfigOption } from "./car-data"
 
 // 用户偏好类型
 export interface UserPreference {
@@ -181,6 +181,9 @@ const carFeatureScores: Record<string, Record<string, number>> = {
   },
 }
 
+// 判断是否在服务器端
+const isServer = typeof window === 'undefined';
+
 // 获取用户数据
 export function getUserData(): UserData {
   return mockUserData
@@ -254,94 +257,134 @@ function calculateCarMatchScore(carId: string, userData: UserData): number {
       return sum + recencyWeight * 0.5
     }, 0)
 
-  // 综合评分
-  const baseScore = totalWeight > 0 ? totalScore / totalWeight : 0
-  return baseScore + browsingFactor + configFactor
+  const finalScore = totalWeight > 0 ? totalScore / totalWeight : 0
+  return finalScore + browsingFactor + configFactor
 }
 
-// 获取推荐车型
-export function getRecommendedCars(limit = 3): CarModel[] {
+// 获取推荐的车型
+export async function getRecommendedCars(limit = 3): Promise<CarModel[]> {
   const userData = getUserData()
-  const allCars = ["luxury-sedan", "city-suv", "sports-car"]
-
-  // 计算每个车型的匹配分数
-  const carScores = allCars.map((carId) => {
-    const car = getCarById(carId)
-    if (!car) return { carId, score: 0 }
-
-    return {
-      carId,
-      car,
-      score: calculateCarMatchScore(carId, userData),
+  
+  try {
+    // 客户端使用 fetch API
+    if (!isServer) {
+      const response = await fetch('/api/cars');
+      if (!response.ok) {
+        throw new Error('获取车型列表失败');
+      }
+      const cars = await response.json();
+      
+      // 计算每个车型的匹配分数
+      const scoredCars = cars.map((car: CarModel) => ({
+        car,
+        score: calculateCarMatchScore(car.id, userData),
+      }));
+      
+      // 按分数排序并返回前N个
+      return scoredCars
+        .sort((a: { score: number }, b: { score: number }) => b.score - a.score)
+        .slice(0, limit)
+        .map((item: { car: CarModel }) => item.car);
     }
-  })
-
-  // 按分数排序并返回前N个
-  return carScores
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((item) => item.car!)
-    .filter(Boolean)
+    
+    // 模拟数据
+    return [
+      {
+        id: "sports-car",
+        name: "跑车系列",
+        basePrice: 580000,
+        description: "极致性能与优雅设计的完美结合",
+        thumbnail: "/placeholder.svg?height=300&width=500",
+        defaultColor: "#c0392b",
+      },
+      {
+        id: "luxury-sedan",
+        name: "豪华轿车",
+        basePrice: 350000,
+        description: "豪华舒适的驾乘体验，配备先进科技和精致内饰",
+        thumbnail: "/placeholder.svg?height=300&width=500",
+        defaultColor: "#1a1a1a",
+      },
+      {
+        id: "city-suv",
+        name: "城市SUV",
+        basePrice: 280000,
+        description: "灵活多变的城市出行选择，兼具空间和操控性",
+        thumbnail: "/placeholder.svg?height=300&width=500",
+        defaultColor: "#2c3e50",
+      }
+    ].slice(0, limit);
+  } catch (error) {
+    console.error('获取推荐车型失败:', error);
+    return [];
+  }
 }
 
-// 获取配置选项的匹配分数
+// 计算选项的匹配分数
 function calculateOptionMatchScore(categoryId: string, optionId: string, userData: UserData): number {
-  // 检查用户之前是否选择过此选项
-  const previousSelections = userData.savedConfigurations.filter(
-    (config) => config.options[categoryId] === optionId,
+  // 查看用户的保存配置中是否选择过此选项
+  const configCount = userData.savedConfigurations.filter(
+    (config) => config.options[categoryId] === optionId
   ).length
 
-  // 根据之前的选择计算基础分数
-  let score = previousSelections * 0.5
-
-  // 根据类别添加额外分数
-  if (categoryId === "exterior-color") {
-    // 颜色偏好
-    if (optionId === "red" && userData.preferences.some((p) => p.id === "exterior" && p.value > 3)) {
-      score += 0.5
-    }
-  } else if (categoryId === "wheels") {
-    // 轮毂偏好
-    if (optionId === "sport" && userData.preferences.some((p) => p.id === "handling" && p.value > 3)) {
-      score += 0.5
-    }
-  } else if (categoryId === "interior") {
-    // 内饰偏好
-    if (optionId.includes("leather") && userData.preferences.some((p) => p.id === "interior" && p.value > 3)) {
-      score += 0.5
-    }
-  } else if (categoryId === "tech-package") {
-    // 科技套件偏好
-    if (optionId.includes("advanced") && userData.preferences.some((p) => p.id === "infotainment" && p.value > 3)) {
-      score += 0.5
-    }
-  } else if (categoryId === "performance") {
-    // 性能套件偏好
-    if (optionId.includes("sport") && userData.preferences.some((p) => p.id === "acceleration" && p.value > 3)) {
-      score += 0.5
-    }
-  }
-
-  return score
+  // 简单匹配逻辑：用户之前选择过此选项的频率
+  return configCount * 0.5
 }
 
-// 获取推荐配置选项
+// 获取推荐的配置选项
 export function getRecommendedOptions(carId: string, categoryId: string): ConfigOption[] {
-  const userData = getUserData()
-  const configCategories = getCarConfigOptions(carId)
-  const category = configCategories.find((cat) => cat.id === categoryId)
-
-  if (!category) return []
-
-  // 计算每个选项的匹配分数
-  const optionScores = category.options.map((option) => {
-    return {
-      option,
-      score: calculateOptionMatchScore(categoryId, option.id, userData),
-    }
-  })
-
-  // 按分数排序
-  return optionScores.sort((a, b) => b.score - a.score).map((item) => item.option)
+  try {
+    // 模拟常见的推荐选项
+    const mockRecommendedOptions: Record<string, ConfigOption[]> = {
+      "exterior-color": [
+        {
+          id: "premium-black",
+          optionKey: "premium-black",
+          name: "高级曜石黑",
+          description: "高级金属漆，深邃黑色带有细微闪光",
+          price: 12000,
+          colorCode: "#0a0a0a",
+          categoryId: "exterior-color"
+        },
+        {
+          id: "metallic-silver",
+          optionKey: "metallic-silver",
+          name: "金属银",
+          description: "明亮的金属银色漆面",
+          price: 8000,
+          colorCode: "#d5d5d5",
+          categoryId: "exterior-color"
+        }
+      ],
+      "interior-color": [
+        {
+          id: "premium-beige",
+          optionKey: "premium-beige",
+          name: "高级米色",
+          description: "优质米色真皮内饰",
+          price: 15000,
+          colorCode: "#e8d4b2",
+          categoryId: "interior-color"
+        }
+      ],
+      "wheels": [
+        {
+          id: "premium-sport",
+          optionKey: "premium-sport",
+          name: "高级运动轮毂",
+          description: "21寸铝合金运动轮毂",
+          price: 25000,
+          thumbnail: "/placeholder.svg?height=100&width=100",
+          categoryId: "wheels"
+        }
+      ]
+    };
+    
+    // 返回该分类的推荐选项或空数组
+    return mockRecommendedOptions[categoryId] || [];
+  } catch (error) {
+    console.error('获取推荐配置选项失败:', error);
+    return [];
+  }
 }
 

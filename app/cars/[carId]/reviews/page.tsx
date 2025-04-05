@@ -12,8 +12,7 @@ interface ReviewsPageProps {
 }
 
 export default async function ReviewsPage({ params }: ReviewsPageProps) {
-  // 修改这里，确保params是已解析的
-  const carId = params.carId
+  const { carId } = await params
   const car = await getCarById(carId)
 
   if (!car) {

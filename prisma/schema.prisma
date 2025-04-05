@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,164 +7,158 @@ datasource db {
   url      = env("POSTGRES_PRISMA_URL")
 }
 
-// 用户模型
 model User {
-  id                 String               @id @default(uuid())
-  email              String               @unique
-  password           String
-  firstName          String?
-  lastName           String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  preferences        UserPreference[]
-  browsingHistory    BrowsingHistory[]
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  password            String
+  firstName           String?
+  lastName            String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  browsingHistory     BrowsingHistory[]
+  notifications       Notification[]
+  orders              Order[]
+  reviews             Review[]
+  helpfulMarks        ReviewHelpful[]
   savedConfigurations SavedConfiguration[]
-  orders             Order[]
-  reviews            Review[]            // 用户评价
-  notifications      Notification[]      // 用户通知
-  helpfulMarks       ReviewHelpful[]     // 标记为有帮助的评价
+  preferences         UserPreference[]
 }
 
-// 商家模型
 model Dealer {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  password     String
-  name         String
-  businessId   String   @unique
-  phone        String?
-  logo         String?  // 商家logo
-  businessName String?  // 商店名称
-  address      String?  // 商店地址
-  city         String?  // 城市
-  province     String?  // 省份
-  postalCode   String?  // 邮政编码
-  businessHours String? // 营业时间
-  description  String?  @db.Text // 商店描述
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  orders       Order[]
-  customers    Customer[] // 关联到客户
-  salesData    SalesData[] // 关联到销售数据
+  id            String      @id @default(uuid())
+  email         String      @unique
+  password      String
+  name          String
+  businessId    String      @unique
+  phone         String?
+  logo          String?
+  businessName  String?
+  address       String?
+  city          String?
+  province      String?
+  postalCode    String?
+  businessHours String?
+  description   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  customers     Customer[]
+  orders        Order[]
+  salesData     SalesData[]
+  cars          Car[]
 }
 
-// 客户模型
 model Customer {
-  id          String    @id @default(uuid())
-  name        String
-  email       String    @unique
-  phone       String?
-  status      String    @default("active") // active, inactive
-  totalSpent  Float     @default(0)
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  phone         String?
+  status        String    @default("active")
+  totalSpent    Float     @default(0)
   lastOrderDate DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  dealer      Dealer    @relation(fields: [dealerId], references: [id], onDelete: Cascade)
-  dealerId    String
-  orders      Order[]   // 关联的订单
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  dealerId      String
+  dealer        Dealer    @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  orders        Order[]
 
   @@index([dealerId])
 }
 
-// 销售数据模型
 model SalesData {
-  id          String    @id @default(uuid())
-  date        DateTime
-  revenue     Float
-  orderCount  Int
-  period      String    // daily, weekly, monthly, yearly
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  dealer      Dealer    @relation(fields: [dealerId], references: [id], onDelete: Cascade)
-  dealerId    String
-  
+  id         String   @id @default(uuid())
+  date       DateTime
+  revenue    Float
+  orderCount Int
+  period     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  dealerId   String
+  dealer     Dealer   @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
   @@index([dealerId])
   @@index([date])
 }
 
-// 汽车模型
 model Car {
-  id                 String               @id
-  name               String
-  basePrice          Float
-  description        String
-  thumbnail          String
-  defaultColor       String
-  status             String               @default("active") // active, draft, archived
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  browsingHistory    BrowsingHistory[]
+  id                  String               @id
+  name                String
+  basePrice           Float
+  description         String
+  thumbnail           String
+  defaultColor        String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  status              String               @default("active")
+  dealerId            String?
+  dealer              Dealer?              @relation(fields: [dealerId], references: [id])
+  browsingHistory     BrowsingHistory[]
+  features            CarFeature[]
+  orders              Order[]
+  reviews             Review[]
   savedConfigurations SavedConfiguration[]
-  orders             Order[]
-  features           CarFeature[]         // 车型特性
-  configOptions      CarConfigOption[]    // 车型配置选项
-  reviews            Review[]             // 车型评价
+  configOptions       CarConfigOption[]
+  
+  @@index([dealerId])
 }
 
-// 用户偏好模型
 model UserPreference {
   id        String   @id @default(uuid())
   name      String
-  value     Int      // 1-5 的偏好程度
+  value     Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-// 浏览历史模型
 model BrowsingHistory {
   id        String   @id @default(uuid())
   timestamp DateTime @default(now())
-  duration  Int      // 浏览时长（秒）
+  duration  Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
-  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
   carId     String
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([carId])
 }
 
-// 保存的配置模型
 model SavedConfiguration {
-  id        String   @id @default(uuid())
-  options   Json     // 存储为JSON格式的配置选项
-  totalPrice Float   @default(0) // 配置的总价
-  timestamp DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  carId     String
+  id         String   @id @default(uuid())
+  options    Json
+  timestamp  DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     String
+  carId      String
+  totalPrice Float    @default(0)
+  car        Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([carId])
 }
 
-// 订单模型
 model Order {
-  id          String   @id @default(uuid())
-  amount      Float
-  status      String   // pending, processing, completed, cancelled
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id])
-  userId      String
-  dealer      Dealer   @relation(fields: [dealerId], references: [id])
-  dealerId    String
-  car         Car      @relation(fields: [carId], references: [id])
-  carId       String
-  // 订单配置选项
+  id            String    @id @default(uuid())
+  amount        Float
+  status        String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  userId        String
+  dealerId      String
+  carId         String
   configuration Json
-  // 与客户关联
-  customer    Customer? @relation(fields: [customerId], references: [id])
-  customerId  String?
+  customerId    String?
+  car           Car       @relation(fields: [carId], references: [id])
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  dealer        Dealer    @relation(fields: [dealerId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([dealerId])
@@ -175,110 +166,103 @@ model Order {
   @@index([customerId])
 }
 
-// 车型特性模型
 model CarFeature {
-  id        String   @id @default(uuid())
-  featureKey String  // 特性的键，如 acceleration, handling 等
-  name      String   // 特性的显示名称
-  score     Int      // 1-5 的分数
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  carId     String
+  id         String   @id @default(uuid())
+  featureKey String
+  name       String
+  score      Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  carId      String
+  car        Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
 
-  @@index([carId])
   @@unique([carId, featureKey])
+  @@index([carId])
 }
 
-// 车型配置选项分类模型
 model CarConfigCategory {
   id          String            @id @default(uuid())
-  categoryKey String            // 分类的键，如 exterior-color, wheels 等
-  name        String            // 分类的显示名称
-  description String            // 分类的描述
+  categoryKey String
+  name        String
+  description String
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   options     CarConfigOption[]
 }
 
-// 车型配置选项模型
 model CarConfigOption {
-  id          String           @id @default(uuid())
-  optionKey   String           // 选项的键，如 black, sport 等
-  name        String           // 选项的显示名称
-  description String           // 选项的描述
-  price       Float            // 选项的额外价格
-  thumbnail   String?          // 选项的缩略图
-  colorCode   String?          // 颜色代码（仅适用于颜色选项）
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  car         Car              @relation(fields: [carId], references: [id], onDelete: Cascade)
+  id          String            @id @default(uuid())
+  optionKey   String
+  name        String
+  description String
+  price       Float
+  thumbnail   String?
+  colorCode   String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   carId       String
-  category    CarConfigCategory @relation(fields: [categoryId], references: [id])
   categoryId  String
+  car         Car               @relation(fields: [carId], references: [id], onDelete: Cascade)
+  category    CarConfigCategory @relation(fields: [categoryId], references: [id])
 
+  @@unique([carId, categoryId, optionKey])
   @@index([carId])
   @@index([categoryId])
-  @@unique([carId, categoryId, optionKey])
 }
 
-// 评价模型
 model Review {
-  id             String   @id @default(uuid())
-  title          String
-  content        String   @db.Text
-  rating         Int      // 1-5星
-  helpful        Int      @default(0) // 有帮助数量
-  verified       Boolean  @default(false) // 是否是已验证购买
-  images         String[] // 评价图片URL列表
-  tags           String[] // 评价标签
-  configurationId String?  // 关联的配置ID（可选）
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  user           User     @relation(fields: [userId], references: [id])
-  userId         String
-  car            Car      @relation(fields: [carId], references: [id])
-  carId          String
-  helpfulMarks   ReviewHelpful[] // 添加反向关系
+  id              String          @id @default(uuid())
+  title           String
+  content         String
+  rating          Int
+  helpful         Int             @default(0)
+  verified        Boolean         @default(false)
+  images          String[]
+  tags            String[]
+  configurationId String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  userId          String
+  carId           String
+  car             Car             @relation(fields: [carId], references: [id])
+  user            User            @relation(fields: [userId], references: [id])
+  helpfulMarks    ReviewHelpful[]
 
   @@index([userId])
   @@index([carId])
 }
 
-// 评价有帮助标记模型
 model ReviewHelpful {
   id        String   @id @default(uuid())
-  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   reviewId  String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
   createdAt DateTime @default(now())
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([reviewId, userId]) // 确保每个用户只能为一个评价标记一次"有帮助"
+  @@unique([reviewId, userId])
   @@index([reviewId])
   @@index([userId])
 }
 
-// 通知类型枚举
+model Notification {
+  id        String           @id @default(uuid())
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  link      String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 enum NotificationType {
   SYSTEM
   ORDER
   REVIEW
   PROMOTION
-}
-
-// 通知模型
-model Notification {
-  id        String           @id @default(uuid())
-  type      NotificationType
-  title     String
-  message   String           @db.Text
-  read      Boolean          @default(false) // 是否已读
-  link      String?          // 相关链接（可选）
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-
-  @@index([userId])
 }

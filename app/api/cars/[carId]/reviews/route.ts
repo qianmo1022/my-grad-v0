@@ -35,8 +35,7 @@ export async function GET(
   { params }: { params: { carId: string } }
 ) {
   try {
-    // 修改这里，确保params是已解析的
-    const carId = params.carId;
+    const { carId } = await params;
     
     // 获取查询参数
     const url = new URL(request.url);
