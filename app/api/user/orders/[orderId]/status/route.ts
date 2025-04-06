@@ -17,7 +17,7 @@ export async function PUT(
     }
 
     // 获取订单ID和请求体
-    const { orderId } = params;
+    const { orderId } = await params;
     const { status } = await request.json();
 
     // 验证状态值

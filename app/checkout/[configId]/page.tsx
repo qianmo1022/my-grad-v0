@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, CreditCard, Truck, Calendar, CheckCircle2 } from "lucide-react"
+import { ArrowLeft, CreditCard, Truck, Calendar, CheckCircle2, MapPin, Phone, Clock } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { getCarById } from "@/lib/car-data"
 
@@ -37,6 +37,26 @@ const getSavedConfig = async (configId: string) => {
   }
 }
 
+// 获取车型对应的经销商信息
+const getCarDealer = async (carId: string) => {
+  if (!carId) {
+    throw new Error("carId不能为空");
+  }
+  
+  try {
+    const response = await fetch(`/api/cars/${carId}/dealer`);
+    
+    if (!response.ok) {
+      throw new Error('获取经销商信息失败');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('获取车型经销商信息失败:', error);
+    throw error;
+  }
+}
+
 // 定义更精确的类型
 interface CheckoutPageProps {
   params: Promise<{
@@ -56,8 +76,7 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
   const [paymentMethod, setPaymentMethod] = useState("credit-card")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [car, setCar] = useState<any>(null)
-  const [dealers, setDealers] = useState<any[]>([])
-  const [selectedDealerId, setSelectedDealerId] = useState<string>("")
+  const [dealer, setDealer] = useState<any>(null)
 
   useEffect(() => {
     // 定义异步函数来加载数据
@@ -83,36 +102,31 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
     
     // 调用异步函数
     loadData()
-
-    // 获取经销商列表
-    const fetchDealers = async () => {
-      try {
-        const response = await fetch('/api/dealers')
-        if (response.ok) {
-          const dealerData = await response.json()
-          setDealers(dealerData)
-          // 如果有经销商，默认选择第一个
-          if (dealerData.length > 0) {
-            setSelectedDealerId(dealerData[0].id)
-          }
-        }
-      } catch (error) {
-        console.error('获取经销商列表失败:', error)
-      }
-    }
-
-    fetchDealers()
   }, [configId, toast])
 
   useEffect(() => {
     if (savedConfig) {
       const loadCarData = async () => {
-        const carData = await getCarById(savedConfig.carId)
-        setCar(carData)
+        try {
+          // 获取车型信息
+          const carData = await getCarById(savedConfig.carId)
+          setCar(carData)
+          
+          // 获取车型对应的经销商信息
+          const dealerData = await getCarDealer(savedConfig.carId)
+          setDealer(dealerData)
+        } catch (error) {
+          console.error('加载车型或经销商数据失败:', error)
+          toast({
+            title: "加载失败",
+            description: "无法加载车型或经销商数据，请稍后再试",
+            variant: "destructive"
+          })
+        }
       }
       loadCarData()
     }
-  }, [savedConfig])
+  }, [savedConfig, toast])
 
   // 处理订单提交
   const handleSubmitOrder = async () => {
@@ -132,7 +146,7 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
           configId,
           deliveryInfo,
           paymentMethod,
-          dealerId: selectedDealerId // 添加选择的经销商ID
+          dealerId: dealer?.id // 使用车型关联的经销商ID
         }),
       })
 
@@ -269,23 +283,37 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="dealer">选择经销商</Label>
-                    <select 
-                      id="dealer" 
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={selectedDealerId}
-                      onChange={(e) => setSelectedDealerId(e.target.value)}
-                    >
-                      {dealers.length === 0 ? (
-                        <option value="">加载中...</option>
+                    <Label>经销商信息</Label>
+                    <div className="border rounded-md p-4 space-y-3">
+                      {dealer ? (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium text-lg">{dealer.businessName || dealer.name}</div>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <MapPin className="h-4 w-4" />
+                            <span>{dealer.address}, {dealer.city}, {dealer.province}</span>
+                          </div>
+                          {dealer.phone && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Phone className="h-4 w-4" />
+                              <span>{dealer.phone}</span>
+                            </div>
+                          )}
+                          {dealer.businessHours && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Clock className="h-4 w-4" />
+                              <span>{dealer.businessHours}</span>
+                            </div>
+                          )}
+                          <div className="text-sm text-muted-foreground mt-2">
+                            该经销商将负责您的车辆交付和售后服务
+                          </div>
+                        </>
                       ) : (
-                        dealers.map((dealer) => (
-                          <option key={dealer.id} value={dealer.id}>
-                            {dealer.businessName} ({dealer.location})
-                          </option>
-                        ))
+                        <div className="text-sm text-muted-foreground">加载经销商信息中...</div>
                       )}
-                    </select>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>预计交付时间</Label>

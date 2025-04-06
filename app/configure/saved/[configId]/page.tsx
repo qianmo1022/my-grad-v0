@@ -86,20 +86,28 @@ export default function SavedConfigPage({ params }: SavedConfigPageProps) {
 
         // 设置已保存的选项
         configCategoriesData.forEach((category: ConfigCategory) => {
-          // 检查保存的选项是否为对象或ID字符串
-          const savedOption = config.options[category.id as keyof typeof config.options]
+          // 查找选项时优先使用categoryKey
+          const savedOption = config.options[category.categoryKey] || config.options[category.id as keyof typeof config.options];
+          
           if (savedOption) {
             if (typeof savedOption === 'string') {
-              // 如果是ID字符串，查找对应的选项对象
-              const option = category.options.find((opt: ConfigOption) => opt.id === savedOption)
+              // 如果是字符串，可能是optionKey或id
+              // 先尝试通过optionKey查找
+              let option = category.options.find((opt: ConfigOption) => opt.optionKey === savedOption);
+              
+              // 如果没找到，再尝试通过id查找
+              if (!option) {
+                option = category.options.find((opt: ConfigOption) => opt.id === savedOption);
+              }
+              
               if (option) {
-                initialOptions[category.id] = option
+                initialOptions[category.id] = option;
               }
             } else if (typeof savedOption === 'object' && savedOption.id) {
               // 如果已经是对象，查找完整的选项对象以获取所有属性
-              const option = category.options.find((opt: ConfigOption) => opt.id === savedOption.id)
+              const option = category.options.find((opt: ConfigOption) => opt.id === savedOption.id);
               if (option) {
-                initialOptions[category.id] = option
+                initialOptions[category.id] = option;
               }
             }
           }

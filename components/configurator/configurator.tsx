@@ -111,6 +111,17 @@ export default function Configurator({ carId, preloadedCar, preloadedConfigCateg
     if (!session || !car) return;
     
     try {
+      // 查找每个选项所属分类的categoryKey，和选项的optionKey
+      const optionsWithKeys = Object.entries(selectedOptions).reduce((acc, [categoryId, option]) => {
+        // 找到当前分类
+        const category = configCategories.find(cat => cat.id === categoryId);
+        if (category && option) {
+          // 使用categoryKey作为键，optionKey作为值
+          acc[category.categoryKey] = option.optionKey;
+        }
+        return acc;
+      }, {} as Record<string, string>);
+
       const response = await fetch('/api/configurations/save', {
         method: 'POST',
         headers: {
@@ -119,10 +130,7 @@ export default function Configurator({ carId, preloadedCar, preloadedConfigCateg
         body: JSON.stringify({
           userId: session.user.id,
           carId: car.id,
-          options: Object.entries(selectedOptions).reduce((acc, [key, value]) => {
-            acc[key] = value.id;
-            return acc;
-          }, {} as Record<string, string>),
+          options: optionsWithKeys,
           basePrice: car.basePrice,
           totalPrice: totalPrice
         }),
@@ -144,6 +152,17 @@ export default function Configurator({ carId, preloadedCar, preloadedConfigCateg
     if (!session || !car) return;
     
     try {
+      // 与handleSaveConfig保持一致，使用categoryKey和optionKey
+      const optionsWithKeys = Object.entries(selectedOptions).reduce((acc, [categoryId, option]) => {
+        // 找到当前分类
+        const category = configCategories.find(cat => cat.id === categoryId);
+        if (category && option) {
+          // 使用categoryKey作为键，optionKey作为值
+          acc[category.categoryKey] = option.optionKey;
+        }
+        return acc;
+      }, {} as Record<string, string>);
+
       const response = await fetch('/api/configurations/order', {
         method: 'POST',
         headers: {
@@ -152,7 +171,7 @@ export default function Configurator({ carId, preloadedCar, preloadedConfigCateg
         body: JSON.stringify({
           userId: session.user.id,
           carId: car.id,
-          options: selectedOptions,
+          options: optionsWithKeys,
           totalPrice: totalPrice
         }),
       });
