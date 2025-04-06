@@ -102,9 +102,6 @@ export default function CarDialog({
         basePrice: Number(values.basePrice),
       };
 
-      // 记录要提交的数据，便于调试
-      console.log('提交的车型数据:', carData);
-
       // 更新车型API调用
       const url = `/api/dealer/cars/${car?.id}`;
       const method = 'PUT';
@@ -123,8 +120,6 @@ export default function CarDialog({
         console.error('API响应错误:', response.status, responseData);
         throw new Error('操作失败');
       }
-
-      console.log('API响应数据:', responseData);
 
       // 成功提示
       toast({

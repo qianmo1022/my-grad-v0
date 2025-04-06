@@ -122,19 +122,19 @@ export default function Home() {
                   id: "luxury-sedan",
                   name: "豪华轿车",
                   price: "¥350,000起",
-                  image: "/placeholder.svg?height=300&width=500",
+                  image: "/et5.jpg",
                 },
                 {
                   id: "city-suv",
                   name: "城市SUV",
                   price: "¥280,000起",
-                  image: "/placeholder.svg?height=300&width=500",
+                  image: "/Model-Y.png",
                 },
                 {
                   id: "sports-car",
                   name: "跑车系列",
                   price: "¥580,000起",
-                  image: "/placeholder.svg?height=300&width=500",
+                  image: "/911.jpg",
                 },
               ].map((car, index) => (
                 <Card key={index} className="overflow-hidden">

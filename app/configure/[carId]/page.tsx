@@ -12,7 +12,7 @@ interface ConfigurePageProps {
 }
 
 export default async function ConfigurePage({ params }: ConfigurePageProps) {
-  const { carId } = params;
+  const { carId } = await params;
   
   // 预先获取车辆信息和配置选项
   const car = await getCarById(carId);

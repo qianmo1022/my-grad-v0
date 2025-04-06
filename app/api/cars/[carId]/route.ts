@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: { carId: string } }
 ) {
   try {
-    const carId = params.carId;
+    const { carId } = await params;
     
     const car = await prisma.car.findUnique({
       where: { id: carId }

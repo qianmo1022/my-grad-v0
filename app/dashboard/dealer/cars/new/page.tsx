@@ -57,7 +57,11 @@ export default function NewCarPage() {
   const onBasicInfoComplete = (values: z.infer<typeof carFormSchema>) => {
     setIsFormComplete(prev => ({ ...prev, basic: true }));
     setCurrentTab("features");
-    // 可以在这里保存草稿
+    
+    // 将默认颜色保存到sessionStorage，以便在配置选项步骤中使用
+    const defaultColor = values.defaultColor;
+    sessionStorage.setItem('defaultCarColor', defaultColor);
+    
     toast({
       title: "基本信息已保存",
       description: "请继续完成车型特性设置",
@@ -145,11 +149,28 @@ export default function NewCarPage() {
           
           // 将配置选项应用到新车型
           if (pendingConfig.options && pendingConfig.options.length > 0) {
-            // 关联选项到新车型
-            const options = pendingConfig.options.map((option: any) => ({
-              ...option,
-              carId: carId
-            }));
+            const options = pendingConfig.options.map((option: any) => {
+              // 确保每个选项都有正确的carId和categoryId
+              if (!option.categoryId && pendingConfig.categories) {
+                // 如果没有categoryId，尝试从categories中找到对应的分类
+                const categoryKey = option.categoryKey || option.optionKey.split('-')[0];
+                const category = pendingConfig.categories.find(
+                  (c: any) => c.categoryKey === categoryKey
+                );
+                if (category) {
+                  return {
+                    ...option,
+                    carId: carId,
+                    categoryId: category.id
+                  };
+                }
+              }
+              
+              return {
+                ...option,
+                carId: carId,
+              };
+            });
             
             // 保存配置选项
             const optionsResponse = await fetch(`/api/dealer/cars/${carId}/config-options`, {
@@ -389,4 +410,4 @@ export default function NewCarPage() {
       </div>
     </DashboardLayout>
   );
-} 
+}

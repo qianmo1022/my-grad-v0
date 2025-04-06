@@ -25,7 +25,7 @@ export async function GET(
   { params }: { params: { carId: string } }
 ) {
   try {
-    const carId = params.carId;
+    const { carId } = await params;
     
     // 检查车型是否存在
     const car = await prisma.car.findUnique({

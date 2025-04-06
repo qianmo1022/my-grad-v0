@@ -7,13 +7,24 @@ import { notFound } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, ShoppingCart, Edit } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getCarById, getCarConfigOptions, type ConfigOption } from "@/lib/car-data"
+import { getCarById, getCarConfigOptions, type ConfigOption, type ConfigCategory } from "@/lib/car-data"
 import PriceSummary from "@/components/configurator/price-summary"
 import CarImageViewer from "@/components/configurator/car-image-viewer"
 import { useToast } from "@/components/ui/use-toast"
 
+// 已保存配置的接口定义
+interface SavedConfig {
+  id: string
+  carId: string
+  carName: string
+  price: number
+  date: string
+  thumbnail: string
+  options: Record<string, string | { id: string }>
+}
+
 // 从API获取已保存配置的函数
-const getSavedConfig = async (configId: string) => {
+const getSavedConfig = async (configId: string): Promise<SavedConfig> => {
   if (!configId) {
     throw new Error("configId不能为空");
   }
@@ -47,7 +58,9 @@ export default function SavedConfigPage({ params }: SavedConfigPageProps) {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, ConfigOption>>({})
   const [totalPrice, setTotalPrice] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
-  const [savedConfig, setSavedConfig] = useState<any>(null)
+  const [savedConfig, setSavedConfig] = useState<SavedConfig | null>(null)
+  const [car, setCar] = useState<any>(null)
+  const [configCategories, setConfigCategories] = useState<ConfigCategory[]>([])
 
   useEffect(() => {
     // 定义异步函数来加载数据
@@ -62,28 +75,29 @@ export default function SavedConfigPage({ params }: SavedConfigPageProps) {
         setSavedConfig(config)
 
         // 获取车型信息和配置选项
-        const car = await getCarById(config.carId)
-        if (!car) {
+        const carData = await getCarById(config.carId)
+        if (!carData) {
           return notFound()
         }
 
-        const configCategories = getCarConfigOptions(config.carId)
+        // 获取配置分类并等待Promise解析
+        const configCategoriesData = await getCarConfigOptions(config.carId)
         const initialOptions: Record<string, ConfigOption> = {}
 
         // 设置已保存的选项
-        configCategories.forEach((category) => {
+        configCategoriesData.forEach((category: ConfigCategory) => {
           // 检查保存的选项是否为对象或ID字符串
           const savedOption = config.options[category.id as keyof typeof config.options]
           if (savedOption) {
             if (typeof savedOption === 'string') {
               // 如果是ID字符串，查找对应的选项对象
-              const option = category.options.find((opt) => opt.id === savedOption)
+              const option = category.options.find((opt: ConfigOption) => opt.id === savedOption)
               if (option) {
                 initialOptions[category.id] = option
               }
             } else if (typeof savedOption === 'object' && savedOption.id) {
               // 如果已经是对象，查找完整的选项对象以获取所有属性
-              const option = category.options.find((opt) => opt.id === savedOption.id)
+              const option = category.options.find((opt: ConfigOption) => opt.id === savedOption.id)
               if (option) {
                 initialOptions[category.id] = option
               }
@@ -93,7 +107,10 @@ export default function SavedConfigPage({ params }: SavedConfigPageProps) {
 
         setSelectedOptions(initialOptions)
         setTotalPrice(config.price)
-        setActiveTab(configCategories[0]?.id || "")
+        setActiveTab(configCategoriesData.length > 0 ? configCategoriesData[0]?.id : "")
+        // 设置配置分类和车型数据
+        setConfigCategories(configCategoriesData)
+        setCar(carData)
         setIsLoading(false)
       } catch (error) {
         console.error('加载配置数据失败:', error)
@@ -107,7 +124,7 @@ export default function SavedConfigPage({ params }: SavedConfigPageProps) {
     
     // 调用异步函数
     loadData()
-  }, [configId])
+  }, [configId, toast])
 
   // 获取当前选择的颜色
   const getCurrentColor = () => {
@@ -117,7 +134,9 @@ export default function SavedConfigPage({ params }: SavedConfigPageProps) {
 
   // 处理编辑按钮点击
   const handleEdit = () => {
-    router.push(`/configure/${savedConfig.carId}`)
+    if (savedConfig) {
+      router.push(`/configure/${savedConfig.carId}`)
+    }
   }
 
   // 处理购买按钮点击
@@ -125,22 +144,22 @@ export default function SavedConfigPage({ params }: SavedConfigPageProps) {
     router.push(`/checkout/${configId}`)
   }
 
-  // 在组件中声明car状态
-  const [car, setCar] = useState<any>(null)
-  const [configCategories, setConfigCategories] = useState<any[]>([])
-
   // 在useEffect中加载car数据
   useEffect(() => {
-    if (savedConfig) {
+    if (savedConfig && configCategories.length === 0) {
       const loadCarData = async () => {
-        const carData = await getCarById(savedConfig.carId)
-        setCar(carData)
-        const categories = getCarConfigOptions(savedConfig.carId)
-        setConfigCategories(categories)
+        try {
+          const carData = await getCarById(savedConfig.carId)
+          setCar(carData)
+          const categoriesData = await getCarConfigOptions(savedConfig.carId)
+          setConfigCategories(categoriesData)
+        } catch (error) {
+          console.error('加载车型数据失败:', error)
+        }
       }
       loadCarData()
     }
-  }, [savedConfig])
+  }, [savedConfig, configCategories.length])
 
   if (isLoading || !savedConfig || !car) {
     return (
@@ -166,8 +185,8 @@ export default function SavedConfigPage({ params }: SavedConfigPageProps) {
             <ArrowLeft className="mr-2 h-4 w-4" />
             返回
           </Button>
-          <h1 className="text-3xl font-bold">{savedConfig.carName}</h1>
-          <p className="text-muted-foreground">保存于 {savedConfig.date}</p>
+          <h1 className="text-3xl font-bold">{savedConfig?.carName}</h1>
+          <p className="text-muted-foreground">保存于 {savedConfig?.date}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleEdit}>
@@ -184,7 +203,7 @@ export default function SavedConfigPage({ params }: SavedConfigPageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* 车辆图片展示 */}
         <div className="lg:col-span-2 h-[500px] bg-muted rounded-lg overflow-hidden">
-          <CarImageViewer carId={savedConfig.carId} carColor={getCurrentColor()} />
+          <CarImageViewer carId={savedConfig?.carId || ""} carColor={getCurrentColor()} />
         </div>
 
         {/* 配置选项 */}

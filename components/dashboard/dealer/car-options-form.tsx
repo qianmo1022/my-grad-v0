@@ -96,8 +96,48 @@ export default function CarOptionsForm({
       
       setCategories(updatedCategories);
     }
-  }, [initialOptions, initialCategories]);
-
+    
+    // 检查是否有默认颜色需要添加为选项
+    const defaultColor = sessionStorage.getItem('defaultCarColor');
+    if (defaultColor && !carId) {
+      // 查找外观颜色分类
+      const exteriorColorCategory = categories.find(c => c.categoryKey === 'exterior-color');
+      if (exteriorColorCategory) {
+        // 检查是否已经存在相同颜色的选项
+        const existingColorOption = options.find(o => 
+          o.categoryKey === 'exterior-color' && 
+          (o.name === defaultColor || o.colorCode === defaultColor)
+        );
+        
+        if (!existingColorOption) {
+          // 生成唯一的选项标识符
+          const uniqueKey = generateUniqueOptionKey('exterior-color');
+          
+          // 创建新的颜色选项
+          const newColorOption: ConfigOption = {
+            optionKey: uniqueKey,
+            name: defaultColor,
+            description: `默认车身颜色 - ${defaultColor}`,
+            price: 0, // 默认颜色通常不额外收费
+            colorCode: defaultColor.startsWith('#') ? defaultColor : `#${defaultColor}`,
+            categoryKey: 'exterior-color',
+            // 不设置临时的categoryId，在保存时会基于categoryKey进行正确关联
+            // categoryId: uniqueKey
+          };
+          
+          // 添加到选项列表
+          const newOptions = [...options, newColorOption];
+          syncOptionsState(newOptions);
+          
+          toast({
+            title: "默认颜色已添加",
+            description: `已将默认颜色 ${defaultColor} 添加到配置选项中`,
+          });
+        }
+      }
+    }
+  }, [categories, options, carId]);
+  
   // 检查是否存在默认分类，如果不存在则添加
   useEffect(() => {
     if (categories.length === 0) {
@@ -191,22 +231,15 @@ export default function CarOptionsForm({
   // 同步选项到全局选项数组和分类的选项数组
   const syncOptionsState = (newOptions: ConfigOption[]) => {
     setOptions(newOptions);
-    
+
     // 根据newOptions更新categories中的options数组
     setCategories(prevCategories => {
       return prevCategories.map(category => {
         const categoryOptions = newOptions.filter(option => {
-          if (option.categoryId && category.id) {
-            return option.categoryId === category.id;
-          }
           if (option.categoryKey) {
             return option.categoryKey === category.categoryKey;
           }
-          // 通过选项key前缀匹配分类key
-          const optionPrefix = option.optionKey.split('-')[0];
-          return optionPrefix === category.categoryKey;
         });
-        
         return {
           ...category,
           options: categoryOptions
@@ -279,6 +312,7 @@ export default function CarOptionsForm({
           description: "",
           price: 0,
           thumbnail: "",
+          // 优先使用分类的实际ID，而不是临时生成ID
           categoryId: categoryByKey.id,
           categoryKey: categoryByKey.categoryKey
         }
@@ -311,6 +345,7 @@ export default function CarOptionsForm({
         description: "",
         price: 0,
         thumbnail: "",
+        // 优先使用分类的实际ID，而不是临时生成ID
         categoryId: categoryByKey.id,
         categoryKey: categoryByKey.categoryKey
       }
@@ -402,7 +437,6 @@ export default function CarOptionsForm({
       // 如果是新车型（没有carId），我们需要先创建分类，然后存储选项信息在本地
       if (!carId) {
         // 1. 保存分类 - 对于新车型，我们需要确保分类被创建
-        // 移除options属性，避免API 400错误
         
         const categoriesResponse = await fetch(`/api/dealer/config-categories`, {
           method: "PUT",
@@ -426,34 +460,32 @@ export default function CarOptionsForm({
           categories.reduce((acc, category) => {
             return category.options ? [...acc, ...category.options] : acc;
           }, [] as ConfigOption[]);
-        
+
+        // 使用从API返回的分类信息更新选项的categoryId
+        const updatedOptions = allOptions.map(option => {
+          // 找到选项对应的分类
+          const categoryKey = option.categoryKey || option.optionKey.split('-')[0];
+          // 从API返回的分类结果中找到对应的分类
+          const newCategory = categoriesResult.categories?.find(
+            (c: any) => c.categoryKey === categoryKey
+          );
+          
+          if (newCategory) {
+            return { 
+              ...option, 
+              categoryId: newCategory.id, 
+              categoryKey: newCategory.categoryKey
+            };
+          }
+          
+          // 如果没找到对应的分类，保留原始值
+          return option;
+        });
+
         const configData = {
           categories: categoriesResult.categories,
-          options: allOptions.map(option => {
-            // 找到对应的分类
-            // 先通过categoryId找，再通过categoryKey找，最后通过optionKey前缀找
-            const category = categories.find(c => 
-              c.id === option.categoryId || 
-              c.categoryKey === option.categoryKey || 
-              c.categoryKey === option.optionKey.split('-')[0]
-            )
-            
-            // 如果有新创建的分类，使用其ID
-            if (category) {
-              // 根据categoryKey查找对应的新分类
-              const newCategory = categoriesResult.categories?.find(
-                (c: any) => c.categoryKey === category.categoryKey
-              )
-              
-              if (newCategory) {
-                return { ...option, categoryId: newCategory.id, categoryKey: newCategory.categoryKey }
-              }
-            }
-            
-            return option
-          })
-        }
-        
+          options: updatedOptions
+        };
         // 存储配置信息到sessionStorage
         sessionStorage.setItem('pendingCarConfig', JSON.stringify(configData))
 
@@ -509,7 +541,14 @@ export default function CarOptionsForm({
           }
         }
         
-        return option
+        // 如果没有找到匹配的分类，但选项有categoryKey，保留原有的categoryKey
+        if (option.categoryKey) {
+          return option;
+        }
+        
+        // 如果没有categoryKey，尝试从optionKey中提取
+        const optionPrefix = option.optionKey.split('-')[0];
+        return { ...option, categoryKey: optionPrefix };
       })
 
       // 保存更新后的选项
@@ -564,7 +603,7 @@ export default function CarOptionsForm({
       return optionsFromCategories;
     }
     
-    // 使用旧的筛选方法作为备选
+    // 使用旧的筛选方法作为备选 - 只返回与当前分类匹配的选项
     return options.filter(option => {
       // 通过categoryId直接匹配
       if (option.categoryId && categoryIds.includes(option.categoryId)) {

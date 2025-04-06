@@ -71,7 +71,7 @@ export async function PUT(
       return NextResponse.json({ error: '未授权访问' }, { status: 401 });
     }
     
-    const { carId } = params;
+    const { carId } = await params;
     
     // 检查车型是否存在
     const car = await prisma.car.findUnique({
@@ -104,17 +104,48 @@ export async function PUT(
           price, 
           thumbnail, 
           colorCode, 
-          categoryId 
+          categoryId,
+          categoryKey 
         } = option;
         
         // 验证必要字段
-        if (!optionKey || !name || price === undefined || !categoryId) {
+        if (!optionKey || !name || price === undefined) {
           return { error: `选项 "${name || optionKey}" 缺少必要字段` };
+        }
+        
+        let finalCategoryId = categoryId;
+        
+        // 如果没有categoryId但有categoryKey，尝试通过categoryKey查找分类
+        if (!finalCategoryId && categoryKey) {
+          const categoryByKey = await prisma.carConfigCategory.findFirst({
+            where: { categoryKey }
+          });
+          
+          if (categoryByKey) {
+            finalCategoryId = categoryByKey.id;
+          } else {
+            // 如果通过categoryKey也找不到分类，尝试从optionKey中提取分类前缀
+            const categoryKeyFromOption = optionKey.split('-')[0];
+            if (categoryKeyFromOption) {
+              const categoryByPrefix = await prisma.carConfigCategory.findFirst({
+                where: { categoryKey: categoryKeyFromOption }
+              });
+              
+              if (categoryByPrefix) {
+                finalCategoryId = categoryByPrefix.id;
+              }
+            }
+          }
+        }
+        
+        // 验证最终得到的分类ID
+        if (!finalCategoryId) {
+          return { error: `选项 "${name}" 无法找到对应的分类` };
         }
         
         // 检查分类是否存在
         const category = await prisma.carConfigCategory.findUnique({
-          where: { id: categoryId }
+          where: { id: finalCategoryId }
         });
         
         if (!category) {
@@ -134,7 +165,7 @@ export async function PUT(
                 connect: { id: carId }
               },
               category: {
-                connect: { id: categoryId }
+                connect: { id: finalCategoryId }
               }
             }
           });

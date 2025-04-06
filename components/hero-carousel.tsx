@@ -4,9 +4,9 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 
 const images = [
-  "/placeholder.svg?height=500&width=800",
-  "/placeholder.svg?height=500&width=800",
-  "/placeholder.svg?height=500&width=800",
+  "/911.jpg",
+  "/et5.jpg",
+  "/r7.jpg",
 ]
 
 export default function HeroCarousel() {
