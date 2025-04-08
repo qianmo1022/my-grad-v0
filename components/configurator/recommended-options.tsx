@@ -10,7 +10,7 @@ import type { ConfigOption } from "@/lib/car-data"
 interface RecommendedOptionsProps {
   options: ConfigOption[]
   selectedOption: ConfigOption
-  onOptionSelect: (option: ConfigOption) => void
+  onOptionSelect: (option: ConfigOption | null) => void
 }
 
 export default function RecommendedOptions({ options, selectedOption, onOptionSelect }: RecommendedOptionsProps) {
@@ -48,7 +48,14 @@ export default function RecommendedOptions({ options, selectedOption, onOptionSe
                   ? "bg-primary/10 border border-primary/30"
                   : "bg-background hover:bg-muted",
               )}
-              onClick={() => onOptionSelect(option)}
+              onClick={() => {
+                // 如果点击的是当前已选中的选项，则取消选择
+                if (option.id === selectedOption.id) {
+                  onOptionSelect(null)
+                } else {
+                  onOptionSelect(option)
+                }
+              }}
             >
               <div className="flex justify-between items-center">
                 <div>

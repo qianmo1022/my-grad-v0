@@ -14,7 +14,7 @@ export async function PUT(request: Request, { params }: { params: { orderId: str
     }
     
     const dealerId = session.user.id;
-    const { orderId } = params;
+    const { orderId } = await params;
     
     if (!orderId) {
       return NextResponse.json({ error: '缺少订单ID' }, { status: 400 });
