@@ -77,13 +77,11 @@ export default function Configurator({ carId, preloadedCar, preloadedConfigCateg
   useEffect(() => {
     if (!isInitialized && configCategories.length > 0) {
       const initialOptions: Record<string, ConfigOption> = {}
+      const requiredCategoryKeys = ['interior-color', 'exterior-color', 'wheels'];
+      
       configCategories.forEach((category) => {
         // 只为内饰颜色、外观颜色和轮毂这三项设置默认值
-        if (category.options.length > 0 && (
-          category.id === "interior-color" || 
-          category.id === "exterior-color" || 
-          category.id === "wheels"
-        )) {
+        if (category.options.length > 0 && requiredCategoryKeys.includes(category.categoryKey)) {
           initialOptions[category.id] = category.options[0]
         }
       })
@@ -109,7 +107,10 @@ export default function Configurator({ carId, preloadedCar, preloadedConfigCateg
   const handleOptionChange = (categoryId: string, option: ConfigOption | null) => {
     // 如果传入的option为null，表示要取消选择
     // 或者如果点击的是当前已选中的选项，且不是必选项，则取消选择
-    const isRequiredCategory = categoryId === "interior-color" || categoryId === "exterior-color" || categoryId === "wheels";
+    // 查找当前分类
+    const category = configCategories.find(cat => cat.id === categoryId);
+    const requiredCategoryKeys = ['interior-color', 'exterior-color', 'wheels'];
+    const isRequiredCategory = category ? requiredCategoryKeys.includes(category.categoryKey) : false;
     const isCurrentlySelected = selectedOptions[categoryId]?.id === option?.id;
     
     if (option === null || (isCurrentlySelected && !isRequiredCategory)) {
@@ -149,8 +150,14 @@ export default function Configurator({ carId, preloadedCar, preloadedConfigCateg
       }, {} as Record<string, string>);
       
       // 确保必选的三个分类已选择
-      const requiredCategories = ['interior-color', 'exterior-color', 'wheels'];
-      const missingRequired = requiredCategories.filter(catId => !selectedOptions[catId]);
+      // 查找categoryKey对应的分类ID
+      const requiredCategoryKeys = ['interior-color', 'exterior-color', 'wheels'];
+      const requiredCategoryIds = configCategories
+        .filter(cat => requiredCategoryKeys.includes(cat.categoryKey))
+        .map(cat => cat.id);
+      
+      // 检查是否所有必选分类都已选择
+      const missingRequired = requiredCategoryIds.filter(catId => !selectedOptions[catId]);
       
       if (missingRequired.length > 0) {
         throw new Error('请选择必要的配置选项：内饰颜色、外观颜色和轮毂');
@@ -199,8 +206,14 @@ export default function Configurator({ carId, preloadedCar, preloadedConfigCateg
       }, {} as Record<string, string>);
       
       // 确保必选的三个分类已选择
-      const requiredCategories = ['interior-color', 'exterior-color', 'wheels'];
-      const missingRequired = requiredCategories.filter(catId => !selectedOptions[catId]);
+      // 查找categoryKey对应的分类ID
+      const requiredCategoryKeys = ['interior-color', 'exterior-color', 'wheels'];
+      const requiredCategoryIds = configCategories
+        .filter(cat => requiredCategoryKeys.includes(cat.categoryKey))
+        .map(cat => cat.id);
+      
+      // 检查是否所有必选分类都已选择
+      const missingRequired = requiredCategoryIds.filter(catId => !selectedOptions[catId]);
       
       if (missingRequired.length > 0) {
         throw new Error('请选择必要的配置选项：内饰颜色、外观颜色和轮毂');
