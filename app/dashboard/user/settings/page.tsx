@@ -180,17 +180,29 @@ export default function SettingsPage() {
       return
     }
     
+    // 验证新密码长度
+    if (newPassword.length < 8) {
+      toast({
+        title: "密码太短",
+        description: "新密码长度必须至少为8个字符",
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+      return
+    }
+    
     try {
-      // 这里应该调用更新密码的API
-      // 目前模拟API请求，后续可以实现真实的API调用
-      // const response = await fetch('/api/user/password', {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ currentPassword, newPassword }),
-      // })
+      // 调用更新密码的API
+      const response = await fetch('/api/user/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
       
-      // 模拟API请求
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || '密码更新失败')
+      }
       
       toast({
         title: "密码已更新",
@@ -203,7 +215,7 @@ export default function SettingsPage() {
       console.error('更新密码错误:', error)
       toast({
         title: "更新失败",
-        description: "更新密码时出现错误，请稍后重试",
+        description: error instanceof Error ? error.message : "更新密码时出现错误，请稍后重试",
         variant: "destructive",
       })
     } finally {

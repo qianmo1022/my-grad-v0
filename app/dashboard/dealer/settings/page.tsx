@@ -187,8 +187,8 @@ export default function DealerSettings() {
       setIsSaving(true)
       
       // 调用API修改密码
-      const response = await fetch('/api/dealer/profile', {
-        method: 'PATCH',
+      const response = await fetch('/api/dealer/password', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           currentPassword: passwordForm.currentPassword,
@@ -613,4 +613,4 @@ export default function DealerSettings() {
       </div>
     </DashboardLayout>
   )
-} 
+}
