@@ -194,32 +194,28 @@ export default function Configurator({ carId, preloadedCar, preloadedConfigCateg
     
     try {
       // 与handleSaveConfig保持一致，使用categoryKey和optionKey
-      // 只处理已选择的选项，允许某些分类为空
       const optionsWithKeys = Object.entries(selectedOptions).reduce((acc, [categoryId, option]) => {
-        // 找到当前分类
         const category = configCategories.find(cat => cat.id === categoryId);
         if (category && option) {
-          // 使用categoryKey作为键，optionKey作为值
           acc[category.categoryKey] = option.optionKey;
         }
         return acc;
       }, {} as Record<string, string>);
       
       // 确保必选的三个分类已选择
-      // 查找categoryKey对应的分类ID
       const requiredCategoryKeys = ['interior-color', 'exterior-color', 'wheels'];
       const requiredCategoryIds = configCategories
         .filter(cat => requiredCategoryKeys.includes(cat.categoryKey))
         .map(cat => cat.id);
       
-      // 检查是否所有必选分类都已选择
       const missingRequired = requiredCategoryIds.filter(catId => !selectedOptions[catId]);
       
       if (missingRequired.length > 0) {
         throw new Error('请选择必要的配置选项：内饰颜色、外观颜色和轮毂');
       }
 
-      const response = await fetch('/api/configurations/order', {
+      // 首先保存配置
+      const saveResponse = await fetch('/api/configurations/save', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -228,18 +224,23 @@ export default function Configurator({ carId, preloadedCar, preloadedConfigCateg
           userId: session.user.id,
           carId: car.id,
           options: optionsWithKeys,
+          basePrice: car.basePrice,
           totalPrice: totalPrice
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('下单预定失败');
+      if (!saveResponse.ok) {
+        const errorData = await saveResponse.json();
+        throw new Error(errorData.error || '保存配置失败');
       }
 
-      const data = await response.json();
-      router.push(`/checkout/${data.id}`);
+      const savedConfig = await saveResponse.json();
+      console.log(savedConfig,'savedConfig')
+      router.push(`/checkout/${savedConfig.id}`);
     } catch (error) {
-      console.error('下单预定时出错:', error);
+      console.error('下单失败:', error);
+      // 这里可以添加错误提示UI
+      alert(error instanceof Error ? error.message : '下单失败，请重试');
     }
   }
 
