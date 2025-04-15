@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { carModels } from '../lib/car-data';
+import { getAllCars } from '../lib/car-data';
 
 const prisma = new PrismaClient();
 
@@ -28,6 +28,7 @@ async function main() {
 
     // 导入汽车数据
     console.log('导入汽车数据...');
+    const carModels = await getAllCars();
     for (const car of carModels) {
       await prisma.car.create({
         data: {

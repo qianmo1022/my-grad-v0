@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <!-- 背景 -->
+  <rect width="800" height="600" fill="#f8f9fa" />
+  <text x="400" y="30" font-family="Arial" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">汽车3D可视化配置系统数据流图</text>
+  
+  <!-- 实体 -->
+  <!-- 用户 -->
+  <rect x="50" y="100" width="120" height="60" rx="10" fill="#e3f2fd" stroke="#2196f3" stroke-width="2" />
+  <text x="110" y="135" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#0d47a1">用户</text>
+  
+  <!-- 浏览器 -->
+  <rect x="250" y="100" width="120" height="60" rx="10" fill="#e8f5e9" stroke="#4caf50" stroke-width="2" />
+  <text x="310" y="135" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#1b5e20">浏览器</text>
+  
+  <!-- Next.js前端 -->
+  <rect x="450" y="100" width="120" height="60" rx="10" fill="#fff3e0" stroke="#ff9800" stroke-width="2" />
+  <text x="510" y="135" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#e65100">Next.js前端</text>
+  
+  <!-- API路由 -->
+  <rect x="650" y="100" width="120" height="60" rx="10" fill="#e1f5fe" stroke="#03a9f4" stroke-width="2" />
+  <text x="710" y="135" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#01579b">API路由</text>
+  
+  <!-- Prisma ORM -->
+  <rect x="650" y="250" width="120" height="60" rx="10" fill="#f3e5f5" stroke="#9c27b0" stroke-width="2" />
+  <text x="710" y="285" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#4a148c">Prisma ORM</text>
+  
+  <!-- PostgreSQL -->
+  <rect x="650" y="400" width="120" height="60" rx="10" fill="#fce4ec" stroke="#e91e63" stroke-width="2" />
+  <text x="710" y="435" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#880e4f">PostgreSQL</text>
+  
+  <!-- Three.js -->
+  <rect x="450" y="250" width="120" height="60" rx="10" fill="#ede7f6" stroke="#673ab7" stroke-width="2" />
+  <text x="510" y="285" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#311b92">Three.js</text>
+  
+  <!-- 认证服务 -->
+  <rect x="250" y="250" width="120" height="60" rx="10" fill="#ffebee" stroke="#f44336" stroke-width="2" />
+  <text x="310" y="285" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#b71c1c">认证服务</text>
+  
+  <!-- 配置服务 -->
+  <rect x="250" y="400" width="120" height="60" rx="10" fill="#fff8e1" stroke="#ffc107" stroke-width="2" />
+  <text x="310" y="435" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#ff6f00">配置服务</text>
+  
+  <!-- 订单服务 -->
+  <rect x="450" y="400" width="120" height="60" rx="10" fill="#e0f2f1" stroke="#009688" stroke-width="2" />
+  <text x="510" y="435" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#004d40">订单服务</text>
+  
+  <!-- 连接线和数据流 -->
+  <!-- 用户到浏览器 -->
+  <line x1="170" y1="130" x2="250" y2="130" stroke="#333" stroke-width="2" />
+  <polygon points="250,130 240,125 240,135" fill="#333" />
+  <text x="210" y="120" font-family="Arial" font-size="12" fill="#333">用户操作</text>
+  
+  <!-- 浏览器到Next.js前端 -->
+  <line x1="370" y1="130" x2="450" y2="130" stroke="#333" stroke-width="2" />
+  <polygon points="450,130 440,125 440,135" fill="#333" />
+  <text x="410" y="120" font-family="Arial" font-size="12" fill="#333">页面请求</text>
+  
+  <!-- Next.js前端到API路由 -->
+  <line x1="570" y1="130" x2="650" y2="130" stroke="#333" stroke-width="2" />
+  <polygon points="650,130 640,125 640,135" fill="#333" />
+  <text x="610" y="120" font-family="Arial" font-size="12" fill="#333">API调用</text>
+  
+  <!-- API路由到Prisma ORM -->
+  <line x1="710" y1="160" x2="710" y2="250" stroke="#333" stroke-width="2" />
+  <polygon points="710,250 705,240 715,240" fill="#333" />
+  <text x="720" y="200" font-family="Arial" font-size="12" fill="#333">数据查询</text>
+  
+  <!-- Prisma ORM到PostgreSQL -->
+  <line x1="710" y1="310" x2="710" y2="400" stroke="#333" stroke-width="2" />
+  <polygon points="710,400 705,390 715,390" fill="#333" />
+  <text x="720" y="350" font-family="Arial" font-size="12" fill="#333">SQL查询</text>
+  
+  <!-- Next.js前端到Three.js -->
+  <line x1="510" y1="160" x2="510" y2="250" stroke="#333" stroke-width="2" />
+  <polygon points="510,250 505,240 515,240" fill="#333" />
+  <text x="520" y="200" font-family="Arial" font-size="12" fill="#333">3D渲染</text>
+  
+  <!-- 浏览器到认证服务 -->
+  <line x1="310" y1="160" x2="310" y2="250" stroke="#333" stroke-width="2" />
+  <polygon points="310,250 305,240 315,240" fill="#333" />
+  <text x="320" y="200" font-family="Arial" font-size="12" fill="#333">登录请求</text>
+  
+  <!-- 认证服务到配置服务 -->
+  <line x1="310" y1="310" x2="310" y2="400" stroke="#333" stroke-width="2" />
+  <polygon points="310,400 305,390 315,390" fill="#333" />
+  <text x="320" y="350" font-family="Arial" font-size="12" fill="#333">用户信息</text>
+  
+  <!-- 配置服务到订单服务 -->
+  <line x1="370" y1="430" x2="450" y2="430" stroke="#333" stroke-width="2" />
+  <polygon points="450,430 440,425 440,435" fill="#333" />
+  <text x="410" y="420" font-family="Arial" font-size="12" fill="#333">配置信息</text>
+  
+  <!-- 订单服务到API路由 -->
+  <line x1="570" y1="430" x2="650" y2="430" stroke="#333" stroke-width="2" />
+  <polygon points="650,430 640,425 640,435" fill="#333" />
+  <text x="610" y="420" font-family="Arial" font-size="12" fill="#333">订单数据</text>
+  
+  <!-- 返回数据流 -->
+  <path d="M650,160 C600,200 550,200 510,180" stroke="#666" stroke-width="2" stroke-dasharray="5,5" fill="none" />
+  <polygon points="510,180 518,185 520,175" fill="#666" />
+  <text x="580" y="170" font-family="Arial" font-size="12" fill="#666">API响应</text>
+  
+  <path d="M450,160 C400,200 350,200 310,180" stroke="#666" stroke-width="2" stroke-dasharray="5,5" fill="none" />
+  <polygon points="310,180 318,185 320,175" fill="#666" />
+  <text x="380" y="170" font-family="Arial" font-size="12" fill="#666">页面渲染</text>
+  
+  <path d="M250,160 C200,200 150,200 110,180" stroke="#666" stroke-width="2" stroke-dasharray="5,5" fill="none" />
+  <polygon points="110,180 118,185 120,175" fill="#666" />
+  <text x="180" y="170" font-family="Arial" font-size="12" fill="#666">用户界面</text>
+  
+  <!-- 数据流说明 -->
+  <rect x="50" y="500" width="700" height="80" rx="5" fill="#f5f5f5" stroke="#9e9e9e" stroke-width="1" />
+  <text x="400" y="520" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">数据流说明</text>
+  <text x="400" y="540" font-family="Arial" font-size="12" text-anchor="middle" fill="#333">实线箭头表示请求数据流，虚线箭头表示响应数据流</text>
+  <text x="400" y="560" font-family="Arial" font-size="12" text-anchor="middle" fill="#333">系统采用前后端分离架构，通过API进行数据交互，实现高效的数据处理和展示</text>
+</svg>
