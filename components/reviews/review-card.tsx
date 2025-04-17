@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ThumbsUp, Check, Calendar, ImageIcon, PenLine, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { type Review, markReviewAsHelpful, deleteReview } from "@/lib/reviews"
+import { sanitizeHtml } from "@/lib/sanitize"
 import {
   Dialog,
   DialogContent,
@@ -159,8 +160,8 @@ export default function ReviewCard({ review, detailed = false, onReviewDeleted }
               </div>
             </div>
 
-            <h4 className="text-lg font-semibold mt-3">{review.title}</h4>
-            <p className={cn("text-muted-foreground mt-2", !detailed && "line-clamp-3")}>{review.content}</p>
+            <h4 className="text-lg font-semibold mt-3">{sanitizeHtml(review.title)}</h4>
+            <p className={cn("text-muted-foreground mt-2", !detailed && "line-clamp-3")}>{sanitizeHtml(review.content)}</p>
 
             {review.images && review.images.length > 0 && (
               <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
@@ -181,7 +182,7 @@ export default function ReviewCard({ review, detailed = false, onReviewDeleted }
               <div className="flex flex-wrap gap-2 mt-4">
                 {review.tags.map((tag, index) => (
                   <Badge key={index} variant="secondary">
-                    {tag}
+                    {sanitizeHtml(tag)}
                   </Badge>
                 ))}
               </div>

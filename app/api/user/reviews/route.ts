@@ -132,6 +132,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '评分必须在1到5之间' }, { status: 400 });
     }
     
+    // 导入XSS防护函数
+    const { validateAndSanitize, sanitizeObject } = await import('@/lib/sanitize');
+    
+    // 检查输入是否包含XSS攻击代码
+    try {
+      validateAndSanitize(title);
+      validateAndSanitize(content);
+      if (body.tags) {
+        body.tags.forEach((tag: string) => validateAndSanitize(tag));
+      }
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message || '输入包含不安全内容' }, { status: 400 });
+    }
+    
     // 检查车型是否存在
     const car = await prisma.car.findUnique({
       where: { id: carId },

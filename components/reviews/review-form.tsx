@@ -13,6 +13,9 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/use-toast"
 import { X, Upload, Star } from "lucide-react"
 import { addReview } from "@/lib/reviews"
+  // 导入XSS防护函数
+import { validateAndSanitize, containsXss } from "@/lib/sanitize"
+
 
 interface ReviewFormProps {
   carId: string
@@ -99,6 +102,38 @@ export default function ReviewForm({ carId, configurationId }: ReviewFormProps) 
       toast({
         title: "请输入评价内容",
         description: "请分享您对车型的详细体验",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // 检查XSS攻击
+    try {
+      // 验证输入是否包含XSS攻击代码
+      if (containsXss(title) || containsXss(content)) {
+        toast({
+          title: "输入包含不安全内容",
+          description: "请移除HTML标签和脚本代码",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // 验证标签是否包含XSS攻击代码
+      for (const tag of tags) {
+        if (containsXss(tag)) {
+          toast({
+            title: "标签包含不安全内容",
+            description: "请移除HTML标签和脚本代码",
+            variant: "destructive",
+          })
+          return
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "验证输入失败",
+        description: error.message || "请检查您的输入",
         variant: "destructive",
       })
       return
